@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const cors =require('cors');
 // Using a more plausible factory function pattern for the SDK.
 const { createClient } = require('@liquidmetal-ai/raindrop');
 
@@ -9,6 +9,8 @@ const PORT = process.env.PORT || 3000;
 
 // Use CORS to allow requests from the frontend
 app.use(cors());
+// Middleware to parse JSON bodies
+app.use(express.json());
 
 // GET endpoint to proxy Liquidmetal Raindrop requests
 app.get('/api/liquidraindrops', async (req, res) => {
@@ -35,6 +37,61 @@ app.get('/api/liquidraindrops', async (req, res) => {
     });
   }
 });
+
+// POST endpoint to proxy ElevenLabs TTS requests
+app.post('/api/elevenlabs/tts', async (req, res) => {
+  const { text, voiceId, stability, style } = req.body;
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: 'ElevenLabs API key not configured on the server.' });
+  }
+
+  if (!text || !voiceId) {
+    return res.status(400).json({ error: 'Request body must contain "text" and "voiceId".' });
+  }
+
+  const elevenLabsUrl = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+  
+  const payload = {
+    text: text,
+    model_id: 'eleven_turbo_v2',
+    voice_settings: {},
+  };
+
+  if (stability !== undefined) {
+    payload.voice_settings.stability = stability;
+  }
+  if (style !== undefined) {
+    payload.voice_settings.style = style;
+  }
+
+  try {
+    const response = await fetch(elevenLabsUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'xi-api-key': apiKey,
+        'Accept': 'audio/mpeg',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('ElevenLabs API Error:', errorText);
+      return res.status(response.status).json({ error: 'Failed to generate audio from ElevenLabs.', details: errorText });
+    }
+
+    res.setHeader('Content-Type', 'audio/mpeg');
+    response.body.pipe(res);
+
+  } catch (error) {
+    console.error('Error proxying to ElevenLabs:', error.message);
+    res.status(500).json({ error: 'Internal server error while fetching TTS audio.' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`[LiquidMetal Proxy] Server is running on port ${PORT}`);

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useRef, FC } from 'react';
 import { GoogleGenAI, Chat, Type } from '@google/genai';
 
@@ -15,6 +16,23 @@ const SENSITIVITY_LEVELS = {
 };
 
 const SENSITIVITY_LABELS = { 1: 'Relaxed', 2: 'Balanced', 3: 'Strict' };
+
+// --- VOICE CONSTANTS ---
+const VOICES = [
+    // American Accents
+    { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', description: 'Calm, American' },
+    { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam', description: 'Deep, Narrative' },
+    { id: 'EXAVITQu4Tvr4xnSDxMaL', name: 'Bella', description: 'Clear, American' },
+    { id: 'MF3mGyEYCl7XYWbV9V6O', name: 'Elli', description: 'Emotional, Young' },
+    { id: 'TxGEqnHWFrWFTVcgV1eT', name: 'Josh', description: 'Deep, American' },
+
+    // British Accents
+    { id: 'jsCqWAovK2LkecY7zXl4', name: 'Freya', description: 'Crisp, British' },
+    { id: 'pMsXgVXv3BLzUgSXRplE', name: 'Serena', description: 'Pleasant, British' },
+    
+    // Other Accents
+    { id: 'piTKgcLEGmPE4e6mEKli', name: 'Nicole', description: 'Calm, Australian' },
+];
 
 
 // --- HELPER FUNCTIONS ---
@@ -101,6 +119,43 @@ const SparklesIcon: FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const SpeakerWaveIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M13.5 4.06c0-1.336-1.616-2.005-2.56-1.06l-4.5 4.5H4.508c-1.141 0-2.318.664-2.66 1.905A9.76 9.76 0 001.5 12c0 .898.121 1.768.348 2.595.341 1.24 1.518 1.905 2.66 1.905H6.44l4.5 4.5c.945.945 2.56.276 2.56-1.06V4.06zM18.584 5.106a.75.75 0 011.06 0c3.099 3.099 3.099 8.191 0 11.29a.75.75 0 11-1.06-1.06 6.75 6.75 0 000-9.172.75.75 0 010-1.06z" />
+        <path d="M16.082 7.608a.75.75 0 011.06 0c1.88 1.88 1.88 4.916 0 6.795a.75.75 0 11-1.06-1.06 3.75 3.75 0 000-4.675.75.75 0 010-1.06z" />
+    </svg>
+);
+
+const PlayIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.647c1.295.748 1.295 2.539 0 3.286L7.279 20.99c-1.25.722-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
+    </svg>
+);
+
+const StopIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path fillRule="evenodd" d="M4.5 7.5a3 3 0 013-3h9a3 3 0 013 3v9a3 3 0 01-3 3h-9a3 3 0 01-3-3v-9z" clipRule="evenodd" />
+    </svg>
+);
+
+const SaveIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M3 5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25v13.5A2.25 2.25 0 0118.75 21H5.25A2.25 2.25 0 013 18.75V5.25zM12 18a.75.75 0 00.75-.75V12.75h1.25a.75.75 0 000-1.5H12V9.75a.75.75 0 00-1.5 0V11.25H9.25a.75.75 0 000 1.5H10.5v4.5a.75.75 0 001.5 0z" />
+    </svg>
+);
+
+const TrashIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-2.005 13.5a.75.75 0 01-.732.656H6.88a.75.75 0 01-.732-.656l-2.005-13.5-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.9h1.368c1.603 0 2.816 1.336 2.816 2.9zM10.5 6h3a.75.75 0 01.75.75v.5a.75.75 0 01-1.5 0v-.5h-3v.5a.75.75 0 01-1.5 0v-.5A.75.75 0 0110.5 6z" clipRule="evenodd" />
+    </svg>
+);
+
+const CheckIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clipRule="evenodd" />
+    </svg>
+);
+
 
 // --- UI COMPONENTS ---
 
@@ -122,6 +177,16 @@ const ErrorBanner: FC<{ message: string | null; onDismiss: () => void; }> = ({ m
       <button onClick={onDismiss} className="ml-auto -mr-1 -mt-1 p-1 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-white" aria-label="Dismiss">
         <XCircleIcon className="w-5 h-5" />
       </button>
+    </div>
+  );
+};
+
+const Toast: FC<{ message: string | null }> = ({ message }) => {
+  if (!message) return null;
+  return (
+    <div className="fixed bottom-20 right-4 z-50 max-w-sm w-full bg-green-600 text-white p-4 rounded-lg shadow-lg flex items-center animate-fade-in" role="status">
+      <CheckIcon className="w-6 h-6 mr-3" />
+      <p className="font-semibold text-base">{message}</p>
     </div>
   );
 };
@@ -158,6 +223,9 @@ const ThemeSwitcher: FC<{currentTheme: string, onChangeTheme: (theme: string) =>
 type Message = { author: 'bot' | 'user'; text: string; };
 type Sentiment = string; // More granular: 'Calm', 'Anxious', 'Frustrated', etc.
 type TypingPattern = 'fatigue' | 'emotion' | 'stable';
+type VoiceSettings = { stability: number; style: number; };
+type VoicePreset = { name: string; stability: number; style: number; };
+type VoiceMode = 'dynamic' | 'custom';
 type AnalysisResult = {
   id: string;
   timestamp: string;
@@ -209,8 +277,14 @@ interface ChatAnalysisSessionProps {
     onAnalysisComplete: (result: AnalysisResult) => void;
     cognitiveInsight: CognitiveInsight | null;
     setCognitiveInsight: React.Dispatch<React.SetStateAction<CognitiveInsight | null>>;
+    isVoiceOutputOn: boolean;
+    selectedVoice: string;
+    onBotReplyAudio: (text: string, voiceId: string, settings: VoiceSettings) => void;
+    voiceMode: VoiceMode;
+    customStability: number;
+    customStyle: number;
 }
-const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessages, sensitivity, isTypingAnalysisOn, isEmotionalGuardOn, onAnalysisComplete, cognitiveInsight, setCognitiveInsight }) => {
+const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessages, sensitivity, isTypingAnalysisOn, isEmotionalGuardOn, onAnalysisComplete, cognitiveInsight, setCognitiveInsight, isVoiceOutputOn, selectedVoice, onBotReplyAudio, voiceMode, customStability, customStyle }) => {
     const [inputValue, setInputValue] = useState('');
     const [isBotReplying, setIsBotReplying] = useState(false);
     const chatRef = useRef<Chat | null>(null);
@@ -230,7 +304,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             chatRef.current = ai.current.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: "You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation. At the beginning of some user messages, you will receive a context tag like '[CONTEXT: sentiment=Anxious, pattern=fatigue, theme=Work, cognitive_load=78]'. Use this information to tailor your response to be more empathetic and relevant to the user's detected state, but do NOT mention the context tag or the analysis directly. For example, if the theme is 'Work' and load is high, you might say 'It sounds like that situation at work is really weighing on you.' to show you understand the topic of stress.",
+                    systemInstruction: "You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation. At the beginning of some user messages, you will receive a context tag like '[CONTEXT: sentiment=Anxious, pattern=fatigue, theme=Work, cognitive_load=78]'. Use this information to tailor your response to be more empathetic and relevant to the user's detected state, but do NOT mention the context tag or the analysis directly. For example, if the theme is 'Work' and load is high, you might say 'It sounds like that situation at work is really weighing on you.' to show you understand the topic of stress. You can use SSML tags like <break time='0.5s'/> for pauses or <emphasis level='strong'>...</emphasis> for emphasis to make your delivery more natural.",
                 },
             });
         } catch (error) {
@@ -299,6 +373,41 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         const finalScore = Math.min(100, Math.round(baseScore * patternMultipliers[pattern]));
         return finalScore;
     };
+    
+    const calculateVoiceSettings = (analysisResult: AnalysisResult): VoiceSettings => {
+        if (voiceMode === 'custom') {
+            return { stability: customStability, style: customStyle };
+        }
+    
+        // Dynamic mode logic: Adjusts voice emotion based on cognitive load.
+        // 'stability' controls randomness (higher = more monotonic/calm).
+        // 'style' controls exaggeration (higher = more expressive/energetic).
+        // This creates a more empathetic response, soothing when the user is stressed
+        // and more engaging when they are calm.
+        const load = analysisResult.cognitiveLoad;
+        const HIGH_LOAD_THRESHOLD = 70;
+        const LOW_LOAD_THRESHOLD = 30;
+    
+        // High cognitive load -> calm, soothing voice
+        if (load >= HIGH_LOAD_THRESHOLD) {
+            return { stability: 0.8, style: 0.1 };
+        }
+        // Low cognitive load -> energetic, positive voice
+        if (load <= LOW_LOAD_THRESHOLD) {
+            return { stability: 0.4, style: 0.6 };
+        }
+    
+        // Interpolate for mid-range cognitive load
+        const loadRange = HIGH_LOAD_THRESHOLD - LOW_LOAD_THRESHOLD;
+        const progress = (load - LOW_LOAD_THRESHOLD) / loadRange; // Progress from low to high load (0.0 to 1.0)
+    
+        // As progress -> 1 (higher load), stability should increase (become calmer)
+        const stability = 0.4 + (0.8 - 0.4) * progress;
+        // As progress -> 1 (higher load), style should decrease (become less expressive)
+        const style = 0.6 - (0.6 - 0.1) * progress;
+    
+        return { stability: parseFloat(stability.toFixed(2)), style: parseFloat(style.toFixed(2)) };
+    };
 
 
     const runAnalysis = async (userMessage: string): Promise<AnalysisResult> => {
@@ -350,6 +459,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         setIsBotReplying(true);
 
         const analysisResult = await runAnalysis(userMessage);
+        const voiceSettings = calculateVoiceSettings(analysisResult);
 
         try {
             if (!chatRef.current) throw new Error("Chat session not initialized.");
@@ -360,6 +470,9 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             const response = await chatRef.current.sendMessage({ message: messageForBot });
             const botResponse = response.text;
             setMessages(prev => [...prev, { author: 'bot', text: botResponse }]);
+            if (isVoiceOutputOn) {
+                onBotReplyAudio(botResponse, selectedVoice, voiceSettings);
+            }
         } catch (error) {
             console.error("Gemini API error:", error);
             setMessages(prev => [...prev, { author: 'bot', text: "Oops, something went wrong. Please try again." }]);
@@ -576,11 +689,50 @@ const AnalysisSettings: FC<{
   onEmotionalToggle: (enabled: boolean) => void;
   sensitivity: number;
   onSensitivityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  isVoiceOutputOn: boolean;
+  onVoiceOutputToggle: (enabled: boolean) => void;
+  selectedVoice: string;
+  onVoiceChange: (voiceId: string) => void;
+  onPreviewVoice: (voiceId: string) => void;
+  previewingVoiceId: string | null;
+  voiceMode: VoiceMode;
+  onVoiceModeChange: (mode: VoiceMode) => void;
+  customStability: number;
+  onCustomStabilityChange: (value: number) => void;
+  customStyle: number;
+  onCustomStyleChange: (value: number) => void;
+  voicePresets: VoicePreset[];
+  onSavePreset: (name: string) => void;
+  onDeletePreset: (name:string) => void;
+  onApplyPreset: (preset: VoicePreset) => void;
   onReset: () => void;
-}> = ({ isTypingAnalysisOn, onTypingToggle, isEmotionalGuardOn, onEmotionalToggle, sensitivity, onSensitivityChange, onReset }) => {
+}> = ({ 
+    isTypingAnalysisOn, onTypingToggle, 
+    isEmotionalGuardOn, onEmotionalToggle, 
+    sensitivity, onSensitivityChange, 
+    isVoiceOutputOn, onVoiceOutputToggle,
+    selectedVoice, onVoiceChange,
+    onPreviewVoice, previewingVoiceId,
+    voiceMode, onVoiceModeChange,
+    customStability, onCustomStabilityChange,
+    customStyle, onCustomStyleChange,
+    voicePresets, onSavePreset, onDeletePreset, onApplyPreset,
+    onReset 
+}) => {
     const sensitivityLabel = SENSITIVITY_LABELS[sensitivity as keyof typeof SENSITIVITY_LABELS] || 'Balanced';
     const sliderPercentage = ((sensitivity - 1) / 2) * 100;
     const isDisabled = !isTypingAnalysisOn && !isEmotionalGuardOn;
+    const [isSavingPreset, setIsSavingPreset] = useState(false);
+    const [newPresetName, setNewPresetName] = useState('');
+
+    const handleSaveClick = () => {
+        if (newPresetName.trim()) {
+            onSavePreset(newPresetName.trim());
+            setNewPresetName('');
+            setIsSavingPreset(false);
+        }
+    };
+
 
     return (
          <div className="space-y-6 p-1">
@@ -616,6 +768,95 @@ const AnalysisSettings: FC<{
                     <input type="range" min="1" max="3" step="1" value={sensitivity} onChange={onSensitivityChange} disabled={isDisabled} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[--accent-primary] disabled:accent-slate-400" />
                 </div>
             </div>
+
+            <div className="border-b border-[--border-color] pb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                        <SpeakerWaveIcon className="w-6 h-6 text-[--text-secondary]" />
+                        <h3 className="text-xl font-semibold text-[--text-primary]">Assistant Voice</h3>
+                    </div>
+                    <button onClick={() => onVoiceOutputToggle(!isVoiceOutputOn)} className={`${isVoiceOutputOn ? 'bg-[--accent-primary]' : 'bg-slate-300'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors`} aria-pressed={isVoiceOutputOn}>
+                        <span className={`${isVoiceOutputOn ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                    </button>
+                </div>
+                <div className={`space-y-3 ${!isVoiceOutputOn ? 'opacity-50' : ''} transition-opacity`}>
+                    {VOICES.map(voice => (
+                        <div key={voice.id} className="flex items-center justify-between p-3 bg-[--bg-primary] rounded-lg border border-[--border-color]">
+                            <label htmlFor={`voice-${voice.id}`} className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    id={`voice-${voice.id}`}
+                                    name="voice-selection"
+                                    value={voice.id}
+                                    checked={selectedVoice === voice.id}
+                                    onChange={() => onVoiceChange(voice.id)}
+                                    disabled={!isVoiceOutputOn}
+                                    className="w-5 h-5 text-[--accent-primary] focus:ring-[--accent-primary]"
+                                />
+                                <div>
+                                    <span className="font-semibold text-base text-[--text-primary]">{voice.name}</span>
+                                    <span className="block text-sm text-[--text-secondary]">{voice.description}</span>
+                                </div>
+                            </label>
+                            <button
+                                onClick={() => onPreviewVoice(voice.id)}
+                                disabled={!isVoiceOutputOn}
+                                className="p-2 rounded-full hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                aria-label={`Preview ${voice.name} voice`}
+                            >
+                                {previewingVoiceId === voice.id ? <StopIcon className="w-6 h-6 text-[--accent-primary]" /> : <PlayIcon className="w-6 h-6 text-[--text-secondary]" />}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* --- NEW: Voice Customization --- */}
+            <div className={`border-b border-[--border-color] pb-6 ${!isVoiceOutputOn ? 'opacity-50 pointer-events-none' : ''}`}>
+                <h3 className="text-xl font-semibold text-[--text-primary] mb-3">Voice Customization</h3>
+                 <div className="flex items-center gap-4 bg-[--bg-primary] p-1 rounded-full border border-[--border-color] mb-4">
+                    <button onClick={() => onVoiceModeChange('dynamic')} className={`flex-1 text-center py-2 rounded-full font-semibold transition-colors ${voiceMode === 'dynamic' ? 'bg-[--accent-primary] text-white' : 'text-[--text-secondary] hover:bg-slate-200'}`}>Dynamic</button>
+                    <button onClick={() => onVoiceModeChange('custom')} className={`flex-1 text-center py-2 rounded-full font-semibold transition-colors ${voiceMode === 'custom' ? 'bg-[--accent-primary] text-white' : 'text-[--text-secondary] hover:bg-slate-200'}`}>Custom</button>
+                </div>
+                <div className={`space-y-4 transition-opacity ${voiceMode === 'custom' ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                    <div>
+                        <label htmlFor="stability-slider" className="flex justify-between text-base font-medium text-[--text-primary] mb-1"><span>Stability (Calm)</span><span>{customStability.toFixed(2)}</span></label>
+                        <input id="stability-slider" type="range" min="0" max="1" step="0.05" value={customStability} onChange={(e) => onCustomStabilityChange(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[--accent-primary]" />
+                    </div>
+                    <div>
+                        <label htmlFor="style-slider" className="flex justify-between text-base font-medium text-[--text-primary] mb-1"><span>Style (Expressive)</span><span>{customStyle.toFixed(2)}</span></label>
+                        <input id="style-slider" type="range" min="0" max="1" step="0.05" value={customStyle} onChange={(e) => onCustomStyleChange(Number(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[--accent-primary]" />
+                    </div>
+                    <div>
+                        {isSavingPreset ? (
+                            <div className="flex gap-2">
+                                <input type="text" value={newPresetName} onChange={(e) => setNewPresetName(e.target.value)} placeholder="Preset Name..." className="flex-grow bg-white border border-[--border-color] text-[--text-primary] rounded-lg p-2 text-base focus:ring-2 focus:ring-[--accent-primary]"/>
+                                <button onClick={handleSaveClick} className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600"><CheckIcon className="w-6 h-6"/></button>
+                                <button onClick={() => setIsSavingPreset(false)} className="p-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300"><XCircleIcon className="w-6 h-6"/></button>
+                            </div>
+                        ) : (
+                            <button onClick={() => setIsSavingPreset(true)} className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-semibold py-2 px-4 rounded-lg hover:bg-slate-200 border border-slate-300 transition-colors">
+                                <SaveIcon className="w-5 h-5" /> Save as Preset
+                            </button>
+                        )}
+                    </div>
+                    {voicePresets.length > 0 && (
+                        <div className="space-y-2 pt-2">
+                             <h4 className="text-base font-semibold text-[--text-secondary]">Your Presets</h4>
+                             {voicePresets.map(preset => (
+                                <div key={preset.name} className="flex items-center justify-between p-2 bg-[--bg-primary] rounded-lg border border-[--border-color]">
+                                    <span className="font-semibold text-base text-[--text-primary]">{preset.name}</span>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => onApplyPreset(preset)} className="text-[--accent-primary] hover:text-[--accent-primary-hover] font-bold text-sm">APPLY</button>
+                                        <button onClick={() => onDeletePreset(preset.name)} className="p-1 text-red-500 hover:text-red-700"><TrashIcon className="w-5 h-5" /></button>
+                                    </div>
+                                </div>
+                             ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div>
                 <h3 className="text-xl font-semibold text-[--text-primary] mb-3">Session Control</h3>
                 <button onClick={onReset} className="w-full bg-red-500 text-white font-semibold py-3 px-5 rounded-lg hover:bg-red-600 transition-colors duration-200 text-xl flex items-center justify-center gap-2">Reset Session</button>
@@ -792,6 +1033,21 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('analysis');
   const [storageError, setStorageError] = useState<string | null>(null);
   const [cognitiveInsight, setCognitiveInsight] = useState<CognitiveInsight | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
+
+  // New state for voice feature
+  const [isVoiceOutputOn, setIsVoiceOutputOn] = useState(() => getInitialValue('isVoiceOutputOn', true, v => v === 'true'));
+  const [selectedVoice, setSelectedVoice] = useState(() => getInitialValue('selectedVoice', VOICES[0].id, String));
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // New state for advanced voice controls
+  const [voiceMode, setVoiceMode] = useState<VoiceMode>(() => getInitialValue('voiceMode', 'dynamic', v => v as VoiceMode));
+  const [customStability, setCustomStability] = useState(() => getInitialValue('customStability', 0.75, Number));
+  const [customStyle, setCustomStyle] = useState(() => getInitialValue('customStyle', 0.1, Number));
+  const [voicePresets, setVoicePresets] = useState<VoicePreset[]>(() => getInitialValue('voicePresets', [], JSON.parse));
 
   const ai = useRef<GoogleGenAI | null>(null);
   const insightFiredRef = useRef(false);
@@ -804,6 +1060,22 @@ export default function App() {
         setStorageError("Could not initialize AI. Check API Key.");
     }
   }, []);
+
+  useEffect(() => {
+    if (toastMessage && toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+    }
+    if (toastMessage) {
+        toastTimeoutRef.current = window.setTimeout(() => {
+            setToastMessage(null);
+        }, 3000);
+    }
+    return () => {
+        if (toastTimeoutRef.current) {
+            clearTimeout(toastTimeoutRef.current);
+        }
+    };
+  }, [toastMessage]);
   
   useEffect(() => {
     try {
@@ -816,13 +1088,68 @@ export default function App() {
       localStorage.setItem('messages', JSON.stringify(messages));
       localStorage.setItem('finalAnalysis', JSON.stringify(finalAnalysis));
       localStorage.setItem('sessionSummary', JSON.stringify(sessionSummary));
+      localStorage.setItem('isVoiceOutputOn', String(isVoiceOutputOn));
+      localStorage.setItem('selectedVoice', selectedVoice);
+      localStorage.setItem('voiceMode', voiceMode);
+      localStorage.setItem('customStability', String(customStability));
+      localStorage.setItem('customStyle', String(customStyle));
+      localStorage.setItem('voicePresets', JSON.stringify(voicePresets));
       if (storageError) setStorageError(null);
     } catch (error) {
       console.error('Failed to save to localStorage', error);
       setStorageError('Your browser settings might be blocking storage. Your settings may not be saved.');
     }
-  }, [theme, isTypingAnalysisOn, isEmotionalGuardOn, globalSensitivity, analysisHistory, messages, finalAnalysis, sessionSummary, storageError]);
+  }, [theme, isTypingAnalysisOn, isEmotionalGuardOn, globalSensitivity, analysisHistory, messages, finalAnalysis, sessionSummary, isVoiceOutputOn, selectedVoice, voiceMode, customStability, customStyle, voicePresets, storageError]);
   
+    const playAudio = useCallback(async (text: string, voiceId: string, settings?: VoiceSettings, onEndCallback?: () => void) => {
+        if (audioRef.current && isAudioPlaying) {
+            audioRef.current.pause();
+        }
+        setIsAudioPlaying(true);
+
+        try {
+            const response = await fetch('/api/elevenlabs/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, voiceId, ...settings })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Failed to fetch audio from server.');
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+
+            if (!audioRef.current) {
+                audioRef.current = new Audio();
+            }
+            audioRef.current.src = url;
+            audioRef.current.play();
+
+            const onEnded = () => {
+                setIsAudioPlaying(false);
+                URL.revokeObjectURL(url);
+                if (onEndCallback) onEndCallback();
+                if(audioRef.current) {
+                    audioRef.current.removeEventListener('ended', onEnded);
+                    audioRef.current.removeEventListener('pause', onEnded);
+                }
+            };
+
+            audioRef.current.addEventListener('ended', onEnded);
+            audioRef.current.addEventListener('pause', onEnded);
+
+        } catch (error: any) {
+            console.error("Audio playback error:", error);
+            setStorageError(`Could not play audio: ${error.message}`);
+            setIsAudioPlaying(false);
+            if (onEndCallback) onEndCallback();
+        }
+    }, [isAudioPlaying]);
+
+
   // Cognitive Shift Detector
   useEffect(() => {
     if (analysisHistory.length < 3 || cognitiveInsight || insightFiredRef.current || !ai.current) return;
@@ -870,6 +1197,34 @@ export default function App() {
     setAnalysisHistory(prev => [...prev, result]);
   }, []);
   
+    const handlePreviewVoice = (voiceId: string) => {
+        if (previewingVoiceId === voiceId && audioRef.current) {
+            audioRef.current.pause(); // This will trigger the 'pause' listener to clean up state
+        } else {
+            setPreviewingVoiceId(voiceId);
+            playAudio("Hello, this is a preview of my voice.", voiceId, { stability: customStability, style: customStyle }, () => {
+                setPreviewingVoiceId(null);
+            });
+        }
+    };
+  
+    const handleSavePreset = (name: string) => {
+        const newPreset: VoicePreset = { name, stability: customStability, style: customStyle };
+        setVoicePresets(prev => [...prev.filter(p => p.name !== name), newPreset]);
+        setToastMessage(`Preset "${name}" saved!`);
+    };
+    
+    const handleDeletePreset = (name: string) => {
+        setVoicePresets(prev => prev.filter(p => p.name !== name));
+        setToastMessage(`Preset "${name}" deleted.`);
+    };
+
+    const handleApplyPreset = (preset: VoicePreset) => {
+        setCustomStability(preset.stability);
+        setCustomStyle(preset.style);
+        setToastMessage(`Preset "${preset.name}" applied!`);
+    };
+
   const handleGenerateSummary = async () => {
     if (!ai.current) { setStorageError("AI service is not available."); return; }
     setIsGeneratingSummary(true);
@@ -968,6 +1323,7 @@ ${finalAnalysis || "Not generated yet."}
 
   const handleResetSession = () => {
     if (window.confirm("Are you sure you want to reset the entire session? This will clear all messages and analysis data.")) {
+        if (audioRef.current) audioRef.current.pause();
         setMessages([{ author: 'bot', text: "Hello! To begin our session, could you tell me a little about how you slept last night?" }]);
         setAnalysisHistory([]);
         setFinalAnalysis(null);
@@ -986,7 +1342,7 @@ ${finalAnalysis || "Not generated yet."}
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
             <div className="lg:col-span-7">
-                <ChatAnalysisSession messages={messages} setMessages={setMessages} isTypingAnalysisOn={isTypingAnalysisOn} isEmotionalGuardOn={isEmotionalGuardOn} sensitivity={globalSensitivity} onAnalysisComplete={handleNewAnalysis} cognitiveInsight={cognitiveInsight} setCognitiveInsight={setCognitiveInsight} />
+                <ChatAnalysisSession messages={messages} setMessages={setMessages} isTypingAnalysisOn={isTypingAnalysisOn} isEmotionalGuardOn={isEmotionalGuardOn} sensitivity={globalSensitivity} onAnalysisComplete={handleNewAnalysis} cognitiveInsight={cognitiveInsight} setCognitiveInsight={setCognitiveInsight} isVoiceOutputOn={isVoiceOutputOn} selectedVoice={selectedVoice} onBotReplyAudio={playAudio} voiceMode={voiceMode} customStability={customStability} customStyle={customStyle} />
             </div>
             <div className="lg:col-span-5">
                  <Card className="h-full">
@@ -1067,13 +1423,27 @@ ${finalAnalysis || "Not generated yet."}
                     )}
                     
                     {activeTab === 'settings' && (
-                        <AnalysisSettings isTypingAnalysisOn={isTypingAnalysisOn} onTypingToggle={setIsTypingAnalysisOn} isEmotionalGuardOn={isEmotionalGuardOn} onEmotionalToggle={setIsEmotionalGuardOn} sensitivity={globalSensitivity} onSensitivityChange={(e) => setGlobalSensitivity(Number(e.target.value))} onReset={handleResetSession} />
+                        <AnalysisSettings 
+                            isTypingAnalysisOn={isTypingAnalysisOn} onTypingToggle={setIsTypingAnalysisOn} 
+                            isEmotionalGuardOn={isEmotionalGuardOn} onEmotionalToggle={setIsEmotionalGuardOn} 
+                            sensitivity={globalSensitivity} onSensitivityChange={(e) => setGlobalSensitivity(Number(e.target.value))} 
+                            isVoiceOutputOn={isVoiceOutputOn} onVoiceOutputToggle={setIsVoiceOutputOn}
+                            selectedVoice={selectedVoice} onVoiceChange={setSelectedVoice}
+                            onPreviewVoice={handlePreviewVoice} previewingVoiceId={previewingVoiceId}
+                            voiceMode={voiceMode} onVoiceModeChange={setVoiceMode}
+                            customStability={customStability} onCustomStabilityChange={setCustomStability}
+                            customStyle={customStyle} onCustomStyleChange={setCustomStyle}
+                            voicePresets={voicePresets} onSavePreset={handleSavePreset}
+                            onDeletePreset={handleDeletePreset} onApplyPreset={handleApplyPreset}
+                            onReset={handleResetSession} 
+                        />
                     )}
                  </Card>
             </div>
         </div>
       </div>
       <ErrorBanner message={storageError} onDismiss={() => setStorageError(null)} />
+      <Toast message={toastMessage} />
     </main>
   );
 }
