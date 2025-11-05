@@ -74,28 +74,32 @@ We built Sleep Safe on a modern, robust architecture designed for security, scal
 
 <br/>
 
-This diagram shows the secure, multi-service architecture we implemented. The frontend in the browser **never** communicated directly with external APIs, ensuring all our access tokens remained 100% confidential in our backend orchestrator.
+This diagram shows our secure, multi-service architecture. The frontend **never** communicated directly with external APIs; our Node.js backend acted as a secure agent, ensuring all access tokens remained 100% confidential.
 
-**Backend-for-Frontend (BFF) Architecture:**
+**Backend-as-Agent Architecture:**
 ```
-+------------------+           +-----------------------------+           +--------------------------+
-|                  |           |                             |---------> |  💧 Liquidmetal Raindrop  |
-| 🌐 User's Browser|           |   ☁️ Vultr Cloud Server      |  2a. Call |     (Data Source)        |
-|  (Frontend App)  |           |  (Nginx + Node.js Backend)  | <---------|                          |
-|                  |           |                             |           +--------------------------+
-+------------------+           +-----------------------------+
-        |                                  |
-        | 1. Makes Request to our backend  |
-        +--------------------------------> |
-        |                                  |           +--------------------------+
-        |                                  |---------> |   🔊 ElevenLabs API      |
-        |                                  |  2b. Call |      (TTS Service)       |
-        |                                  | <---------|                          |
-        |                                  |           +--------------------------+
-        |                                  |
-        |      3. Returns JSON data and/or |
-        |         Audio Stream to Browser  |
-        <--------------------------------+
++------------------+      1. User Interaction      +-----------------------------+
+|                  | ----------------------------> |                             |
+| 🌐 User's Browser|                               |   ☁️ Vultr Cloud Server      |
+|  (Frontend App)  |      (via Nginx Proxy)        |  (Node.js Agent Service)    |
+|                  |                               |                             |
++------------------+ <---------------------------- +-----------------------------+
+        ^           4. Streams back UI updates                      |
+        |               & 44.1kHz PCM Audio                         | 2. Orchestrates API Calls
+        |                                                           |
+        +-----------------------------------------------------------+
+                                                                    |
+                                        +---------------------------+---------------------------+
+                                        |                           |                           |
+                                        ▼                           ▼                           ▼
+                            +--------------------------+ +--------------------------+ +--------------------------+
+                            |     🤖 Gemini API        | |  💧 Liquidmetal Raindrop  | |   🔊 ElevenLabs API      |
+                            |  (Analysis & Text Gen)   | |     (Data Source)        | |      (Voice Gen)       |
+                            +--------------------------+ +--------------------------+ +--------------------------+
+                                    ^                           ^                           ^
+                                    |                           |                           |
+                                    +---------------------------+---------------------------+
+                                           3. Secure API calls with dynamic parameters
 ```
 </details>
 
@@ -117,10 +121,15 @@ The beautiful and interactive user interface **was prototyped and rapidly built*
 *   **Our Mastery Moment 🏆:** Our "next level" moment was integrating the Gemini-generated frontend with our custom Vultr backend. We skillfully modified the React components to make secure `fetch` calls to our own `/api/liquidraindrops` endpoint.
 *   **The Impact 🌉:** This crucial step transformed a static UI into a dynamic, data-driven application. It proved we could seamlessly connect AI-generated code with a custom, secure infrastructure, massively accelerating our development without sacrificing quality or security.
 
-### 4. Giving the App a Voice with ElevenLabs 🔊
-To elevate the experience from a visual interface to an immersive co-pilot, **we integrated ElevenLabs** to provide a calming, narrative voice for the AI's insights.
+### 4. Giving the App an Empathetic Voice with ElevenLabs 🔊
+To elevate the experience from a visual interface to an immersive co-pilot, we integrated the full professional suite of **ElevenLabs**. We didn't just make the app talk; we gave it an empathetic, dynamic, and hyper-realistic voice that responded to the user's emotional state.
 
-*   **Our Mastery Moment 🏆:** Our backend Node.js app evolved into an intelligent orchestrator. It learned to make chained API calls: first, to retrieve data or generate text with Gemini, and then a second, conditional call to the ElevenLabs API to convert that text into a high-quality audio stream. We mastered handling API keys for multiple services and processing the binary audio data for seamless delivery to the frontend.
-*   **The Impact 💪:** This transformed the application. Instead of just reading insights, users could *listen* to them, making the experience more personal, accessible, and therapeutic. It turned a data tool into a genuine digital companion, significantly enhancing user engagement.
+*   **Our Mastery Moment 🏆:** Our backend Node.js agent became an intelligent audio orchestrator. We mastered ElevenLabs' most advanced features to create a truly next-generation experience:
+    *   **High-Fidelity Persona:** We utilized **Professional Voice Cloning** to create a unique, studio-quality voice for the Sleep Safe co-pilot, ensuring a consistent and recognizable persona.
+    *   **Dynamic Emotional Delivery:** We went beyond static text-to-speech. Our agent programmatically injected **SSML (Speech Synthesis Markup Language)** into Gemini's text output and dynamically adjusted API parameters like `stability` and `style`. This allowed the AI's vocal delivery to change based on the user's real-time cognitive load—becoming calmer during moments of high stress or more encouraging during positive reflection.
+    *   **Real-Time Conversation:** For a seamless, natural flow, we integrated the **low-latency Flash models**, ensuring the AI's spoken responses were delivered almost instantly, eliminating awkward pauses and making the conversation feel fluid.
+    *   **Broadcast-Quality Audio:** We configured all API calls to return the highest possible fidelity: **44.1kHz PCM audio**. This ensured the user experienced a crisp, professional, and soothing audio stream, transforming the interaction into a premium, therapeutic session.
+
+*   **The Impact 💪:** This transformed the application from a smart tool into a genuine digital companion. The dynamic emotional range made the AI's insights feel more personal and empathetic, significantly enhancing user trust and engagement. Listening to a high-quality, calming voice tailored to their mood turned a data-driven analysis into a deeply supportive and human-like experience.
 
 </details>
