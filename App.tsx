@@ -87,6 +87,14 @@ const FireIcon: FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const ClipboardDocumentListIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path fillRule="evenodd" d="M10.5 3A2.25 2.25 0 008.25 5.25v.057a3.743 3.743 0 014.5 0V5.25A2.25 2.25 0 0010.5 3zM6 5.25a3.75 3.75 0 007.5 0V5.25a2.25 2.25 0 012.25-2.25H18a3.75 3.75 0 013.75 3.75v10.5A3.75 3.75 0 0118 21H6a3.75 3.75 0 01-3.75-3.75V9A3.75 3.75 0 016 5.25zM12 9a.75.75 0 01.75.75v.008a.75.75 0 01-1.5 0V9.75A.75.75 0 0112 9z" clipRule="evenodd" />
+        <path d="M11.24 12.006a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25zM15.74 12.006a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25zM11.24 16.506a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25zM15.74 16.506a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25z" />
+    </svg>
+);
+
+
 // --- UI COMPONENTS ---
 
 const Card: FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => (
@@ -117,7 +125,7 @@ const Header: FC<{theme: string, setTheme: (theme: string) => void}> = ({theme, 
       <MoonIcon className="w-10 h-10 text-[--accent-primary]" />
       <h1 className="text-5xl md:text-6xl font-bold text-[--text-primary] tracking-tight">Sleep Safe</h1>
     </div>
-    <p className="text-[--text-secondary] mt-4 text-lg md:text-xl max-w-prose mx-auto">An AI-Powered Thematic Cognitive Analysis Platform.</p>
+    <p className="text-[--text-secondary] mt-4 text-lg md:text-xl max-w-prose mx-auto">An AI-Powered Dynamic Cognitive Co-Pilot.</p>
     <ThemeSwitcher currentTheme={theme} onChangeTheme={setTheme} />
   </header>
 );
@@ -530,6 +538,10 @@ const MarkdownRenderer: FC<{ content: string }> = ({ content }) => {
             if (line.startsWith('### ')) {
                 return <h3 key={index} className="text-xl font-semibold text-[--text-primary] mt-4 mb-2">{line.substring(4)}</h3>;
             }
+             if (line.startsWith('* ')) {
+                const itemContent = line.replace(/^\*\s/, '');
+                return <li key={index} className="ml-5 list-disc text-base text-[--text-secondary] mb-2">{renderInline(itemContent)}</li>;
+            }
             if (line.match(/^\d+\.\s/)) {
                 const itemContent = line.replace(/^\d+\.\s/, '');
                 return <li key={index} className="ml-5 text-base text-[--text-secondary] mb-2">{renderInline(itemContent)}</li>;
@@ -681,7 +693,9 @@ export default function App() {
   const [analysisHistory, setAnalysisHistory] = useState<AnalysisResult[]>(() => getInitialValue('analysisHistory', [], JSON.parse));
   const [messages, setMessages] = useState<Message[]>(() => getInitialValue('messages', [{ author: 'bot', text: "Hello! To begin our session, could you tell me a little about how you slept last night?" }], JSON.parse));
   const [finalAnalysis, setFinalAnalysis] = useState<string | null>(() => getInitialValue('finalAnalysis', null, JSON.parse));
+  const [sessionSummary, setSessionSummary] = useState<string | null>(() => getInitialValue('sessionSummary', null, JSON.parse));
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('analysis');
   const [storageError, setStorageError] = useState<string | null>(null);
   const [cognitiveInsight, setCognitiveInsight] = useState<CognitiveInsight | null>(null);
@@ -708,16 +722,17 @@ export default function App() {
       localStorage.setItem('analysisHistory', JSON.stringify(analysisHistory));
       localStorage.setItem('messages', JSON.stringify(messages));
       localStorage.setItem('finalAnalysis', JSON.stringify(finalAnalysis));
+      localStorage.setItem('sessionSummary', JSON.stringify(sessionSummary));
       if (storageError) setStorageError(null);
     } catch (error) {
       console.error('Failed to save to localStorage', error);
       setStorageError('Your browser settings might be blocking storage. Your settings may not be saved.');
     }
-  }, [theme, isTypingAnalysisOn, isEmotionalGuardOn, globalSensitivity, analysisHistory, messages, finalAnalysis, storageError]);
+  }, [theme, isTypingAnalysisOn, isEmotionalGuardOn, globalSensitivity, analysisHistory, messages, finalAnalysis, sessionSummary, storageError]);
   
   // Cognitive Shift Detector
   useEffect(() => {
-    if (analysisHistory.length < 3 || cognitiveInsight || insightFiredRef.current) return;
+    if (analysisHistory.length < 3 || cognitiveInsight || insightFiredRef.current || !ai.current) return;
 
     const lastThree = analysisHistory.slice(-3);
     const [thirdLast, secondLast, last] = lastThree;
@@ -728,18 +743,61 @@ export default function App() {
     const isCurrentStateHigh = last.cognitiveLoad > 65; // Ends in a high load state
 
     if (wasInitialStateCalm && isSharpIncrease && isCurrentStateHigh) {
-        setCognitiveInsight({
-            insight: "It appears the intensity of our conversation has increased recently.",
-            suggestion: "Is there something specific on your mind?"
-        });
-        insightFiredRef.current = true; // Prevents it from firing again this session
+        const generateSuggestion = async () => {
+            const recentMessages = messages.slice(-3).map(m => `${m.author}: ${m.text}`).join('\n');
+            const prompt = `A user is chatting with a wellness bot. Their cognitive load has suddenly increased. Based on their last few messages, generate a single, gentle, open-ended question to help them explore what might be on their mind. Do not refer to the analysis. The question should be empathetic and encouraging. Respond with ONLY the question itself.
+            
+            Recent conversation:
+            ${recentMessages}`;
+            
+            try {
+                const response = await ai.current!.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+                const suggestion = response.text.trim().replace(/"/g, ''); // Clean up quotes
+                 setCognitiveInsight({
+                    insight: "It appears the intensity of our conversation has increased recently.",
+                    suggestion: suggestion || "Is there something specific on your mind?" // Fallback
+                });
+                insightFiredRef.current = true; // Prevents it from firing again this session
+            } catch(e) {
+                console.error("Failed to generate dynamic suggestion:", e);
+                 // Fallback to static suggestion on error
+                setCognitiveInsight({
+                    insight: "It appears the intensity of our conversation has increased recently.",
+                    suggestion: "Is there something specific on your mind?"
+                });
+                insightFiredRef.current = true;
+            }
+        };
+        generateSuggestion();
     }
-  }, [analysisHistory, cognitiveInsight]);
+  }, [analysisHistory, cognitiveInsight, messages]);
 
 
   const handleNewAnalysis = useCallback((result: AnalysisResult) => {
     setAnalysisHistory(prev => [...prev, result]);
   }, []);
+  
+  const handleGenerateSummary = async () => {
+    if (!ai.current) { setStorageError("AI service is not available."); return; }
+    setIsGeneratingSummary(true);
+    const fullTranscript = messages.map(m => `${m.author === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
+    
+    const prompt = `You are a helpful wellness analyst. Read the following conversation transcript and provide a concise, bulleted summary (3-4 points) of the main topics discussed and the key emotional turning points. Focus on the user's journey. Start your response with "Here is a quick summary of your session:". Use Markdown for the bullet points (e.g., "* Point 1").
+    
+    **Transcript:**
+    ${fullTranscript}`;
+    
+    try {
+        const response = await ai.current.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
+        setSessionSummary(response.text);
+    } catch (error) {
+        console.error("Session summary generation error:", error);
+        setStorageError("Sorry, I couldn't generate the session summary. Please try again.");
+        setSessionSummary(null);
+    } finally {
+        setIsGeneratingSummary(false);
+    }
+  };
 
   const handleGenerateFinalPlan = async () => {
     if (!ai.current) { setStorageError("AI service is not available."); return; }
@@ -786,6 +844,11 @@ Keep the tone supportive, positive, and encouraging.`;
 
 ---
 
+## AI-Generated Session Summary
+${sessionSummary || "Not generated yet."}
+
+---
+
 ## Conversation Transcript
 ${messages.map(m => `[${m.author.toUpperCase()}] ${m.text}`).join('\n')}
 
@@ -815,6 +878,7 @@ ${finalAnalysis || "Not generated yet."}
         setMessages([{ author: 'bot', text: "Hello! To begin our session, could you tell me a little about how you slept last night?" }]);
         setAnalysisHistory([]);
         setFinalAnalysis(null);
+        setSessionSummary(null);
         setCognitiveInsight(null);
         insightFiredRef.current = false;
     }
@@ -858,6 +922,26 @@ ${finalAnalysis || "Not generated yet."}
                                     <button onClick={handleExportSession} disabled={analysisHistory.length === 0} className="text-sm font-medium text-[--accent-primary] hover:text-[--accent-primary-hover] disabled:opacity-50 disabled:cursor-not-allowed">Export Session</button>
                                 </div>
                                 <TrendChart history={analysisHistory} />
+                            </div>
+                            <div className="border-t border-[--border-color] pt-6">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <ClipboardDocumentListIcon className="w-6 h-6 text-[--text-secondary]" />
+                                    <h3 className="text-xl font-semibold text-[--text-primary]">Session at a Glance</h3>
+                                </div>
+                                {isGeneratingSummary ? (
+                                    <AnalysisSkeletonLoader />
+                                ) : sessionSummary ? (
+                                    <div className="p-4 bg-[--bg-primary] rounded-lg border border-[--border-color] max-h-96 overflow-y-auto">
+                                        <MarkdownRenderer content={sessionSummary} />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p className="text-[--text-secondary] mb-4">Generate a quick, AI-powered summary of your conversation's key points.</p>
+                                        <button onClick={handleGenerateSummary} disabled={isGeneratingSummary || userMessagesCount < 2} className="w-full bg-[--accent-primary] text-white font-semibold py-3 px-5 rounded-lg hover:bg-[--accent-primary-hover] transition-colors duration-200 text-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                            {isGeneratingSummary ? (<><span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>Generating...</>) : (`Generate Summary (${userMessagesCount}/2)`)}
+                                        </button>
+                                    </>
+                                )}
                             </div>
                             <div className="border-t border-[--border-color] pt-6">
                                 <div className="flex items-center gap-3 mb-3">
