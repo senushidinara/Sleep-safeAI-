@@ -5,12 +5,22 @@ const ACTIVITY_THRESHOLD = 25;
 const ACTIVITY_RESET_TIMEOUT = 3000; // 3 seconds
 const SNOOZE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 const TYPING_ANALYSIS_WINDOW = 4000; // 4 seconds
+const SCROLL_ANALYSIS_WINDOW = 2000; // 2 seconds
+const EMOTIONAL_KEY_THRESHOLD = 40; // High speed typing
+const EMOTIONAL_ERROR_RATIO_MAX = 0.05; // Low error rate (5%)
+
 
 // --- SENSITIVITY THRESHOLDS ---
 const SENSITIVITY_LEVELS = {
     1: { keys: 30, errorRatio: 0.3, label: 'Relaxed' },    // Requires intense typing with many errors
     2: { keys: 20, errorRatio: 0.2, label: 'Balanced' },  // Default, balanced detection
     3: { keys: 15, errorRatio: 0.1, label: 'Strict' },     // More sensitive to signs of fatigue
+};
+
+const SCROLL_SENSITIVITY_LEVELS = {
+    1: { distance: 4000, label: 'Relaxed' },    // Requires very fast scrolling
+    2: { distance: 3000, label: 'Balanced' },  // Default, balanced detection
+    3: { distance: 2000, label: 'Strict' },     // More sensitive to scrolling
 };
 
 
@@ -57,10 +67,23 @@ const BrainIcon: FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const BeakerIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path fillRule="evenodd" d="M3.375 3C2.339 3 1.5 3.84 1.5 4.875v.512c1.352.074 2.68.397 3.952.975a.75.75 0 01.473 1.09L4.2 12.75a.75.75 0 01-1.299-.75l1.725-5.325c-1.3-1.013-2.125-2.58-2.125-4.325V4.875C2.5 3.84 3.339 3 4.375 3H19.625c1.036 0 1.875.84 1.875 1.875v.001c0 1.745-.826 3.312-2.125 4.325l1.725 5.325a.75.75 0 01-1.3.75L18.075 8.44a.75.75 0 01.473-1.09c1.272-.578 2.6-.901 3.952-.975v-.513C22.5 3.84 21.661 3 20.625 3H3.375z" clipRule="evenodd" />
+      <path d="M12 12.75a.75.75 0 00-1.125-.632l-3 1.5a.75.75 0 00-.375.632V21a.75.75 0 00.75.75h7.5a.75.75 0 00.75-.75v-6.75a.75.75 0 00-.375-.632l-3-1.5A.75.75 0 0012 12.75z" />
+    </svg>
+);
+
+const ArrowsUpDownIcon: FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l3.75 3.75a.75.75 0 01-1.06 1.06L12 4.06l-3.22 3.22a.75.75 0 01-1.06-1.06l3.75-3.75zm-3.75 14.25a.75.75 0 011.06 0L12 19.94l3.22-3.22a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0l-3.75-3.75a.75.75 0 010-1.06z" clipRule="evenodd" />
+  </svg>
+);
+
 
 // --- UI COMPONENTS ---
 
-type BlockType = 'none' | 'activity' | 'fatigue';
+type BlockType = 'none' | 'activity' | 'fatigue' | 'emotion' | 'scroll';
 
 interface BlockingOverlayProps {
   onSnooze: () => void;
@@ -78,6 +101,14 @@ const BlockingOverlay: FC<BlockingOverlayProps> = ({ onSnooze, blockType }) => {
     fatigue: {
       title: "You seem tired.",
       body: "Your typing patterns suggest it might be time to rest. Protecting your sleep helps you recharge for tomorrow."
+    },
+    emotion: {
+      title: "Take a deep breath.",
+      body: "Your typing suggests you might be feeling agitated. Stepping away for a moment can help. A calm mind leads to better sleep."
+    },
+    scroll: {
+      title: "Fast scrolling detected.",
+      body: "Scrolling quickly can be a sign of distraction. Take a moment to rest your eyes and mind."
     }
   };
   
@@ -86,12 +117,12 @@ const BlockingOverlay: FC<BlockingOverlayProps> = ({ onSnooze, blockType }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-fade-in">
       <div className="bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center border border-slate-700 transform transition-all animate-scale-in">
-        <MoonIcon className="w-16 h-16 text-violet-400 mx-auto mb-4" />
-        <h2 className="text-3xl font-bold text-slate-100 mb-2">{title}</h2>
-        <p className="text-slate-400 mb-8">{body}</p>
+        <MoonIcon className="w-16 h-16 text-violet-400 mx-auto mb-6" />
+        <h2 className="text-4xl font-bold text-slate-100 mb-3">{title}</h2>
+        <p className="text-slate-400 mb-8 text-lg">{body}</p>
         <button
           onClick={onSnooze}
-          className="w-full bg-violet-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition-colors duration-200"
+          className="w-full bg-violet-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition-colors duration-200 text-lg"
         >
           Snooze for 5 minutes
         </button>
@@ -108,11 +139,11 @@ const BlockingOverlay: FC<BlockingOverlayProps> = ({ onSnooze, blockType }) => {
 
 const Header: FC = () => (
   <header className="text-center p-6">
-    <div className="flex items-center justify-center gap-3">
-      <MoonIcon className="w-8 h-8 text-violet-400" />
-      <h1 className="text-4xl font-bold text-slate-100 tracking-tight">Sleep Safe</h1>
+    <div className="flex items-center justify-center gap-4">
+      <MoonIcon className="w-10 h-10 text-violet-400" />
+      <h1 className="text-5xl font-bold text-slate-100 tracking-tight">Sleep Safe</h1>
     </div>
-    <p className="text-slate-400 mt-2 max-w-prose">Block addictive apps and protect your sleep from late-night digital habits.</p>
+    <p className="text-slate-400 mt-4 text-lg max-w-prose">Block addictive apps and protect your sleep from late-night digital habits.</p>
   </header>
 );
 
@@ -124,54 +155,67 @@ interface DashboardProps {
   isSnoozed: boolean;
   blockedAppsCount: number;
   isTypingAnalysisOn: boolean;
+  isEmotionalGuardOn: boolean;
+  isScrollAnalysisOn: boolean;
 }
 
-const Dashboard: FC<DashboardProps> = ({ currentTime, sleepTime, wakeTime, isSleepTime, isSnoozed, blockedAppsCount, isTypingAnalysisOn }) => {
+const Dashboard: FC<DashboardProps> = ({ currentTime, sleepTime, wakeTime, isSleepTime, isSnoozed, blockedAppsCount, isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn }) => {
   const status = isSnoozed ? { text: "Snoozed", color: "bg-yellow-400" } :
                  isSleepTime ? { text: "Sleep Time Active", color: "bg-green-400" } :
                  { text: "Monitoring", color: "bg-blue-400" };
 
+  const analysisStatus = useMemo(() => {
+    const onCount = [isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn].filter(Boolean).length;
+    if (onCount === 3) {
+      return { text: "On", color: "text-green-400" };
+    }
+    if (onCount > 0) {
+      return { text: "Partial", color: "text-yellow-400" };
+    }
+    return { text: "Off", color: "text-slate-500" };
+  }, [isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn]);
+
   return (
-    <div className="w-full max-w-md bg-slate-800/50 p-6 rounded-2xl border border-slate-700 backdrop-blur-lg">
+    <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-slate-100">Status</h2>
+        <h2 className="text-3xl font-semibold text-slate-100">Status</h2>
         <div className="flex items-center gap-2">
           <div className={`w-3 h-3 rounded-full ${status.color} animate-pulse`}></div>
-          <span className="text-slate-300 font-medium">{status.text}</span>
+          <span className="text-slate-300 font-medium text-lg">{status.text}</span>
         </div>
       </div>
       <div className="text-center mb-6">
-        <p className="text-6xl font-mono font-bold text-slate-50 tracking-wider">
+        <p className="text-7xl font-mono font-bold text-slate-50 tracking-wider">
           {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
         <div className="flex flex-col items-center">
-          <p className="text-slate-400 text-sm">Bedtime</p>
+          <p className="text-slate-400">Bedtime</p>
           <div className="flex items-center gap-2 mt-1">
-            <MoonIcon className="w-5 h-5 text-slate-500" />
-            <p className="text-xl font-semibold text-slate-200">{sleepTime}</p>
+            <MoonIcon className="w-6 h-6 text-slate-500" />
+            <p className="text-2xl font-semibold text-slate-200">{sleepTime}</p>
           </div>
         </div>
         <div className="flex flex-col items-center">
-          <p className="text-slate-400 text-sm">Wake up</p>
+          <p className="text-slate-400">Wake up</p>
           <div className="flex items-center gap-2 mt-1">
-            <SunIcon className="w-5 h-5 text-slate-500" />
-            <p className="text-xl font-semibold text-slate-200">{wakeTime}</p>
+            <SunIcon className="w-6 h-6 text-slate-500" />
+            <p className="text-2xl font-semibold text-slate-200">{wakeTime}</p>
           </div>
         </div>
         <div className="flex flex-col items-center">
-          <p className="text-slate-400 text-sm">Blocked Apps</p>
+          <p className="text-slate-400">Blocked Apps</p>
           <div className="flex items-center gap-2 mt-1">
-            <ShieldCheckIcon className="w-5 h-5 text-slate-500" />
-            <p className="text-xl font-semibold text-slate-200">{blockedAppsCount}</p>
+            <ShieldCheckIcon className="w-6 h-6 text-slate-500" />
+            <p className="text-2xl font-semibold text-slate-200">{blockedAppsCount}</p>
           </div>
         </div>
         <div className="flex flex-col items-center">
-          <p className="text-slate-400 text-sm">Typing Analysis</p>
+          <p className="text-slate-400">Behavioral Analysis</p>
           <div className="flex items-center gap-2 mt-1">
-            <BrainIcon className="w-5 h-5 text-slate-500" />
-            <p className={`text-xl font-semibold ${isTypingAnalysisOn ? 'text-green-400' : 'text-slate-500'}`}>{isTypingAnalysisOn ? 'On' : 'Off'}</p>
+            <BrainIcon className="w-6 h-6 text-slate-500" />
+            <p className={`text-2xl font-semibold ${analysisStatus.color}`}>{analysisStatus.text}</p>
           </div>
         </div>
       </div>
@@ -187,27 +231,27 @@ interface SettingsProps {
 }
 
 const Settings: FC<SettingsProps> = ({ sleepTime, wakeTime, onSleepTimeChange, onWakeTimeChange }) => (
-  <div className="w-full max-w-md bg-slate-800/50 p-6 rounded-2xl border border-slate-700 backdrop-blur-lg mt-6">
-    <h2 className="text-2xl font-semibold text-slate-100 mb-4">Your Schedule</h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+    <h2 className="text-3xl font-semibold text-slate-100 mb-6">Your Schedule</h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <div>
-        <label htmlFor="sleepTime" className="block text-sm font-medium text-slate-400 mb-1">Bedtime</label>
+        <label htmlFor="sleepTime" className="block text-base font-medium text-slate-400 mb-2">Bedtime</label>
         <input
           type="time"
           id="sleepTime"
           value={sleepTime}
           onChange={onSleepTimeChange}
-          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
         />
       </div>
       <div>
-        <label htmlFor="wakeTime" className="block text-sm font-medium text-slate-400 mb-1">Wake up</label>
+        <label htmlFor="wakeTime" className="block text-base font-medium text-slate-400 mb-2">Wake up</label>
         <input
           type="time"
           id="wakeTime"
           value={wakeTime}
           onChange={onWakeTimeChange}
-          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
         />
       </div>
     </div>
@@ -232,34 +276,224 @@ const BlocklistSettings: FC<BlocklistSettingsProps> = ({ blockedApps, onAddApp, 
     };
 
     return (
-        <div className="w-full max-w-md bg-slate-800/50 p-6 rounded-2xl border border-slate-700 backdrop-blur-lg mt-6">
-            <h2 className="text-2xl font-semibold text-slate-100 mb-4">App Blocklist</h2>
-            <form onSubmit={handleAdd} className="flex gap-2 mb-4">
+        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+            <h2 className="text-3xl font-semibold text-slate-100 mb-6">App Blocklist</h2>
+            <form onSubmit={handleAdd} className="flex gap-3 mb-4">
                 <input
                     type="text"
                     value={newApp}
                     onChange={(e) => setNewApp(e.target.value)}
                     placeholder="e.g., 'YouTube', 'Reddit'"
-                    className="flex-grow bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-2 focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                    className="flex-grow bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
                     aria-label="Add app to blocklist"
                 />
-                <button type="submit" className="bg-violet-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-violet-700 transition-colors duration-200">
+                <button type="submit" className="bg-violet-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-violet-700 transition-colors duration-200 text-lg">
                     Add
                 </button>
             </form>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
                 {blockedApps.length > 0 ? (
                     blockedApps.map((app) => (
-                        <div key={app} className="flex items-center justify-between bg-slate-700/50 p-2 rounded-lg animate-fade-in">
-                            <span className="text-slate-300 break-all">{app}</span>
-                            <button onClick={() => onRemoveApp(app)} className="text-slate-500 hover:text-red-400 ml-2" aria-label={`Remove ${app} from blocklist`}>
-                                <XCircleIcon className="w-6 h-6 flex-shrink-0" />
+                        <div key={app} className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in">
+                            <span className="text-slate-300 text-lg break-all">{app}</span>
+                            <button onClick={() => onRemoveApp(app)} className="text-slate-500 hover:text-red-400 ml-3" aria-label={`Remove ${app} from blocklist`}>
+                                <XCircleIcon className="w-7 h-7 flex-shrink-0" />
                             </button>
                         </div>
                     ))
                 ) : (
-                    <p className="text-slate-500 text-center py-4">No apps on your blocklist.</p>
+                    <p className="text-slate-500 text-center py-4 text-lg">No apps on your blocklist.</p>
                 )}
+            </div>
+        </div>
+    );
+};
+
+interface TypingSandboxProps {
+    typingSensitivity: number;
+    isTypingAnalysisOn: boolean;
+    isEmotionalGuardOn: boolean;
+}
+
+type AnalysisStats = {
+  keys: number;
+  backspaces: number;
+  errorRatio: number;
+  pattern: 'fatigue' | 'emotion' | null;
+  confidence: number | null;
+};
+
+const TypingSandbox: FC<TypingSandboxProps> = ({ typingSensitivity, isTypingAnalysisOn, isEmotionalGuardOn }) => {
+    const [text, setText] = useState('');
+    const [visualTypingStats, setVisualTypingStats] = useState({ keys: 0, backspaces: 0 });
+    const [analysisResult, setAnalysisResult] = useState<string | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [lastAnalysisStats, setLastAnalysisStats] = useState<AnalysisStats | null>(null);
+    
+    const typingStats = useRef({ keys: 0, backspaces: 0 });
+    const typingAnalysisTimer = useRef<number | null>(null);
+    const resultTimer = useRef<number | null>(null);
+
+    const threshold = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS];
+
+    const calculateFatigueConfidence = (keys: number, errorRatio: number) => {
+        const keyRatio = Math.min(1, Math.max(0, (keys - threshold.keys) / (threshold.keys)));
+        const errorRatioPercentage = Math.min(1, Math.max(0, (errorRatio - threshold.errorRatio) / (threshold.errorRatio)));
+        return Math.min(100, Math.max(0, Math.round(((keyRatio * 0.5) + (errorRatioPercentage * 0.5)) * 100)));
+    };
+
+    const calculateEmotionConfidence = (keys: number, errorRatio: number) => {
+        const keyRatio = Math.min(1, Math.max(0, (keys - EMOTIONAL_KEY_THRESHOLD) / (EMOTIONAL_KEY_THRESHOLD)));
+        const errorPerfRatio = Math.max(0, (EMOTIONAL_ERROR_RATIO_MAX - errorRatio) / EMOTIONAL_ERROR_RATIO_MAX);
+        return Math.min(100, Math.max(0, Math.round(((keyRatio * 0.6) + (errorPerfRatio * 0.4)) * 100)));
+    };
+
+    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setText(e.target.value);
+    };
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (!isTypingAnalysisOn && !isEmotionalGuardOn) return;
+
+        if (resultTimer.current) clearTimeout(resultTimer.current);
+        setAnalysisResult(null);
+        setIsAnalyzing(true);
+
+        const isBackspace = event.key === 'Backspace';
+
+        typingStats.current.keys += 1;
+        if (isBackspace) {
+            typingStats.current.backspaces += 1;
+        }
+
+        setVisualTypingStats({ ...typingStats.current });
+
+        if (typingAnalysisTimer.current) {
+            clearTimeout(typingAnalysisTimer.current);
+        }
+
+        typingAnalysisTimer.current = window.setTimeout(() => {
+            const { keys, backspaces } = typingStats.current;
+            const errorRatio = keys > 0 ? backspaces / keys : 0;
+            
+            let resultMessage = "Analysis complete. Keep typing to start a new session.";
+            let detectedPattern: 'fatigue' | 'emotion' | null = null;
+            let confidence: number | null = null;
+
+            if (isEmotionalGuardOn && keys >= EMOTIONAL_KEY_THRESHOLD && errorRatio <= EMOTIONAL_ERROR_RATIO_MAX) {
+                resultMessage = "Emotional Pattern Detected: High speed with low errors.";
+                detectedPattern = 'emotion';
+                confidence = calculateEmotionConfidence(keys, errorRatio);
+            } else if (isTypingAnalysisOn && keys >= threshold.keys && errorRatio >= threshold.errorRatio) {
+                resultMessage = "Fatigue Pattern Detected: High intensity with high error rate.";
+                detectedPattern = 'fatigue';
+                confidence = calculateFatigueConfidence(keys, errorRatio);
+            }
+            
+            setAnalysisResult(resultMessage);
+            setLastAnalysisStats({ keys, backspaces, errorRatio, pattern: detectedPattern, confidence });
+
+            typingStats.current = { keys: 0, backspaces: 0 };
+            setVisualTypingStats({ keys: 0, backspaces: 0 });
+            typingAnalysisTimer.current = null;
+            setIsAnalyzing(false);
+            
+            resultTimer.current = window.setTimeout(() => {
+                setAnalysisResult(null);
+                setLastAnalysisStats(null);
+            }, 5000);
+
+        }, TYPING_ANALYSIS_WINDOW);
+    };
+
+    const intensityPercent = Math.min(100, (visualTypingStats.keys / threshold.keys) * 100);
+    const errorRate = visualTypingStats.keys > 0 ? (visualTypingStats.backspaces / visualTypingStats.keys) : 0;
+    const errorPercent = threshold.errorRatio > 0 ? Math.min(100, (errorRate / threshold.errorRatio) * 100) : 0;
+
+    const intensityBarColor = intensityPercent >= 100 ? 'bg-red-500' : intensityPercent >= 75 ? 'bg-yellow-500' : 'bg-violet-500';
+    const errorBarColor = errorPercent >= 100 ? 'bg-red-500' : errorPercent >= 75 ? 'bg-yellow-500' : 'bg-pink-500';
+
+    return (
+        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+            <div className="flex items-center gap-3 mb-4">
+                <BeakerIcon className="w-8 h-8 text-slate-400" />
+                <h2 className="text-3xl font-semibold text-slate-100">Analysis Sandbox</h2>
+            </div>
+            <p className="text-slate-400 text-base mb-6">
+                Type in the box below to see how the behavioral analysis works in real-time. This is a safe test area and will not trigger the block screen.
+            </p>
+            <textarea
+                id="typing-sandbox"
+                value={text}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
+                placeholder={(!isTypingAnalysisOn && !isEmotionalGuardOn) ? "Enable an analysis to begin..." : "Start typing here..."}
+                className="w-full h-28 bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mb-6 resize-none disabled:opacity-50"
+                aria-label="Typing analysis sandbox"
+                disabled={!isTypingAnalysisOn && !isEmotionalGuardOn}
+            />
+             <div className="grid grid-cols-2 gap-4 text-center mb-6 border-b border-slate-700/50 pb-6">
+                <div>
+                    <p className="text-slate-400 text-sm font-medium">Keys Pressed</p>
+                    <p className="text-4xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.keys}</p>
+                </div>
+                <div>
+                    <p className="text-slate-400 text-sm font-medium">Backspaces</p>
+                    <p className="text-4xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.backspaces}</p>
+                </div>
+            </div>
+             <div className="space-y-4">
+                 <div>
+                     <div className="flex justify-between items-center text-base mb-1">
+                         <div className="flex items-center gap-2">
+                            <span className="text-slate-400">Typing Intensity</span>
+                            {isAnalyzing && <span className="text-blue-400 text-sm animate-pulse">Analyzing...</span>}
+                         </div>
+                         <span className="text-slate-300 font-mono">{visualTypingStats.keys} / {threshold.keys}</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3">
+                         <div className={`${intensityBarColor} h-3 rounded-full transition-all duration-200`} style={{ width: `${intensityPercent}%` }}></div>
+                     </div>
+                 </div>
+                 <div>
+                     <div className="flex justify-between items-center text-base mb-1">
+                         <span className="text-slate-400">Error Rate</span>
+                         <span className="text-slate-300 font-mono">{(errorRate * 100).toFixed(0)}% / {(threshold.errorRatio * 100).toFixed(0)}%</span>
+                     </div>
+                     <div className="w-full bg-slate-700 rounded-full h-3">
+                         <div className={`${errorBarColor} h-3 rounded-full transition-all duration-200`} style={{ width: `${errorPercent}%` }}></div>
+                     </div>
+                 </div>
+                 {analysisResult && (
+                    <div className="mt-4 text-center p-4 bg-slate-700/50 rounded-lg animate-fade-in">
+                        <p className="text-violet-300 font-medium text-base">{analysisResult}</p>
+                        {lastAnalysisStats?.confidence != null && (
+                            <div className="mt-2">
+                                <span className="text-slate-400 text-sm">Confidence: </span>
+                                <span className="text-2xl font-bold text-white">{lastAnalysisStats.confidence}%</span>
+                            </div>
+                        )}
+                    </div>
+                 )}
+                 {lastAnalysisStats && (
+                    <div className="mt-6 pt-4 border-t border-slate-700/50 animate-fade-in">
+                        <h3 className="text-lg font-semibold text-slate-300 mb-3 text-center">Detailed Analysis (Last 4s)</h3>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <p className="text-slate-400 text-sm">Keys Pressed</p>
+                                <p className="text-2xl font-bold text-slate-100">{lastAnalysisStats.keys}</p>
+                            </div>
+                            <div>
+                                <p className="text-slate-400 text-sm">Backspaces</p>
+                                <p className="text-2xl font-bold text-slate-100">{lastAnalysisStats.backspaces}</p>
+                            </div>
+                            <div>
+                                <p className="text-slate-400 text-sm">Error Ratio</p>
+                                <p className="text-2xl font-bold text-slate-100">{(lastAnalysisStats.errorRatio * 100).toFixed(1)}%</p>
+                            </div>
+                        </div>
+                    </div>
+                 )}
             </div>
         </div>
     );
@@ -270,8 +504,6 @@ interface TypingAnalysisSettingsProps {
     onToggle: (enabled: boolean) => void;
     typingSensitivity: number;
     onSensitivityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    visualTypingStats: { keys: number; backspaces: number };
-    isSleepTime: boolean;
 }
 
 const TypingAnalysisSettings: FC<TypingAnalysisSettingsProps> = ({ 
@@ -279,21 +511,13 @@ const TypingAnalysisSettings: FC<TypingAnalysisSettingsProps> = ({
     onToggle, 
     typingSensitivity, 
     onSensitivityChange,
-    visualTypingStats,
-    isSleepTime
 }) => {
     const sensitivityLabel = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS]?.label || 'Balanced';
-    const threshold = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS];
-
-    const intensityPercent = Math.min(100, (visualTypingStats.keys / threshold.keys) * 100);
-    const errorRate = visualTypingStats.keys > 0 ? (visualTypingStats.backspaces / visualTypingStats.keys) * 100 : 0;
-    const errorPercent = threshold.errorRatio > 0 ? Math.min(100, (errorRate / (threshold.errorRatio * 100)) * 100) : 0;
-
 
     return (
-        <div className="w-full max-w-md bg-slate-800/50 p-6 rounded-2xl border border-slate-700 backdrop-blur-lg mt-6">
+        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold text-slate-100">Typing Analysis</h2>
+                <h2 className="text-3xl font-semibold text-slate-100">Fatigue Analysis</h2>
                 <button
                     onClick={() => onToggle(!isTypingAnalysisOn)}
                     className={`${
@@ -306,12 +530,12 @@ const TypingAnalysisSettings: FC<TypingAnalysisSettingsProps> = ({
                     } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
                 </button>
             </div>
-            <p className="text-slate-400 text-sm mb-4">
-                Analyzes typing patterns like speed and errors during sleep hours to detect potential fatigue and encourage rest.
+            <p className="text-slate-400 text-base mb-6">
+                Analyzes typing for high speed and error rates to detect potential fatigue.
             </p>
-            <div className={`space-y-4 pt-4 border-t border-slate-700/50 ${!isTypingAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
+            <div className={`space-y-4 pt-6 border-t border-slate-700/50 ${!isTypingAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
                 <div>
-                    <label htmlFor="sensitivity" className="block text-sm font-medium text-slate-400 mb-1">
+                    <label htmlFor="sensitivity" className="block text-base font-medium text-slate-400 mb-2">
                         Sensitivity: <span className="font-bold text-slate-300">{sensitivityLabel}</span>
                     </label>
                     <input
@@ -326,38 +550,99 @@ const TypingAnalysisSettings: FC<TypingAnalysisSettingsProps> = ({
                         className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-violet-500 disabled:accent-slate-600"
                     />
                 </div>
-                <div className="mt-4">
-                    <h3 className="text-lg font-semibold text-slate-300 mb-2">Live Monitor</h3>
-                    {isSleepTime && isTypingAnalysisOn ? (
-                        <div className="space-y-3">
-                            <div>
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span className="text-slate-400">Typing Intensity</span>
-                                    <span className="text-slate-300">{visualTypingStats.keys} / {threshold.keys} keys</span>
-                                </div>
-                                <div className="w-full bg-slate-700 rounded-full h-2.5">
-                                    <div className="bg-violet-500 h-2.5 rounded-full transition-all duration-200" style={{ width: `${intensityPercent}%` }}></div>
-                                </div>
-                            </div>
-                            <div>
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span className="text-slate-400">Error Rate</span>
-                                     <span className="text-slate-300">{errorRate.toFixed(0)}% / {(threshold.errorRatio * 100).toFixed(0)}%</span>
-                                </div>
-                                <div className="w-full bg-slate-700 rounded-full h-2.5">
-                                     <div className="bg-pink-500 h-2.5 rounded-full transition-all duration-200" style={{ width: `${errorPercent}%` }}></div>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-4 px-2 bg-slate-700/50 rounded-lg">
-                           <p className="text-slate-400 text-sm">
-                                {isTypingAnalysisOn ? "Live analysis will appear here during your scheduled sleep hours." : "Enable Typing Analysis to see live monitor."}
-                            </p>
-                        </div>
-                    )}
+            </div>
+        </div>
+    );
+};
+
+interface ScrollAnalysisSettingsProps {
+    isScrollAnalysisOn: boolean;
+    onToggle: (enabled: boolean) => void;
+    scrollSensitivity: number;
+    onSensitivityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const ScrollAnalysisSettings: FC<ScrollAnalysisSettingsProps> = ({ 
+    isScrollAnalysisOn, 
+    onToggle, 
+    scrollSensitivity, 
+    onSensitivityChange,
+}) => {
+    const sensitivityLabel = SCROLL_SENSITIVITY_LEVELS[scrollSensitivity as keyof typeof SCROLL_SENSITIVITY_LEVELS]?.label || 'Balanced';
+
+    return (
+        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+            <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                    <ArrowsUpDownIcon className="w-8 h-8 text-slate-400" />
+                    <h2 className="text-3xl font-semibold text-slate-100">Scroll Analysis</h2>
+                </div>
+                <button
+                    onClick={() => onToggle(!isScrollAnalysisOn)}
+                    className={`${
+                        isScrollAnalysisOn ? 'bg-violet-600' : 'bg-slate-700'
+                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                    aria-pressed={isScrollAnalysisOn}
+                >
+                    <span className={`${
+                        isScrollAnalysisOn ? 'translate-x-6' : 'translate-x-1'
+                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                </button>
+            </div>
+            <p className="text-slate-400 text-base mb-6">
+                Analyzes scroll speed to detect frantic scrolling that can indicate late-night distraction.
+            </p>
+            <div className={`space-y-4 pt-6 border-t border-slate-700/50 ${!isScrollAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
+                <div>
+                    <label htmlFor="scroll-sensitivity" className="block text-base font-medium text-slate-400 mb-2">
+                        Sensitivity: <span className="font-bold text-slate-300">{sensitivityLabel}</span>
+                    </label>
+                    <input
+                        type="range"
+                        id="scroll-sensitivity"
+                        min="1"
+                        max="3"
+                        step="1"
+                        value={scrollSensitivity}
+                        onChange={onSensitivityChange}
+                        disabled={!isScrollAnalysisOn}
+                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-violet-500 disabled:accent-slate-600"
+                    />
                 </div>
             </div>
+        </div>
+    );
+};
+
+
+interface EmotionalGuardSettingsProps {
+    isEmotionalGuardOn: boolean;
+    onToggle: (enabled: boolean) => void;
+}
+
+const EmotionalGuardSettings: FC<EmotionalGuardSettingsProps> = ({ isEmotionalGuardOn, onToggle }) => {
+    return (
+        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+            <div className="flex justify-between items-center mb-4">
+                 <div className="flex items-center gap-3">
+                    <BrainIcon className="w-8 h-8 text-slate-400" />
+                    <h2 className="text-3xl font-semibold text-slate-100">Emotional Guard</h2>
+                </div>
+                <button
+                    onClick={() => onToggle(!isEmotionalGuardOn)}
+                    className={`${
+                        isEmotionalGuardOn ? 'bg-violet-600' : 'bg-slate-700'
+                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                    aria-pressed={isEmotionalGuardOn}
+                >
+                    <span className={`${
+                        isEmotionalGuardOn ? 'translate-x-6' : 'translate-x-1'
+                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                </button>
+            </div>
+            <p className="text-slate-400 text-base">
+                Analyzes typing for very high speed with low errors to detect potential agitation and suggest a break.
+            </p>
         </div>
     );
 };
@@ -370,18 +655,25 @@ export default function App() {
   const [wakeTime, setWakeTime] = useState(() => getInitialValue('wakeTime', '06:00', String));
   const [blockedApps, setBlockedApps] = useState(() => getInitialValue('blockedApps', ['YouTube', 'Twitter', 'Reddit', 'Facebook', 'Instagram'], JSON.parse));
   const [isTypingAnalysisOn, setIsTypingAnalysisOn] = useState(() => getInitialValue('isTypingAnalysisOn', true, (v) => v === 'true'));
+  const [isEmotionalGuardOn, setIsEmotionalGuardOn] = useState(() => getInitialValue('isEmotionalGuardOn', true, (v) => v === 'true'));
+  const [isScrollAnalysisOn, setIsScrollAnalysisOn] = useState(() => getInitialValue('isScrollAnalysisOn', true, (v) => v === 'true'));
   const [typingSensitivity, setTypingSensitivity] = useState(() => getInitialValue('typingSensitivity', 2, Number));
+  const [scrollSensitivity, setScrollSensitivity] = useState(() => getInitialValue('scrollSensitivity', 2, Number));
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isActivityBlocked, setIsActivityBlocked] = useState(false);
   const [isFatigueBlocked, setIsFatigueBlocked] = useState(false);
+  const [isEmotionBlocked, setIsEmotionBlocked] = useState(false);
+  const [isScrollBlocked, setIsScrollBlocked] = useState(false);
   const [snoozeUntil, setSnoozeUntil] = useState<Date | null>(null);
-  const [visualTypingStats, setVisualTypingStats] = useState({ keys: 0, backspaces: 0 });
 
   const activityCount = useRef(0);
   const activityTimer = useRef<number | null>(null);
   const typingStats = useRef({ keys: 0, backspaces: 0 });
   const typingAnalysisTimer = useRef<number | null>(null);
+  const scrollDelta = useRef(0);
+  const lastScrollY = useRef(window.scrollY);
+  const scrollAnalysisTimer = useRef<number | null>(null);
   
   // Persist settings to localStorage
   useEffect(() => {
@@ -390,11 +682,14 @@ export default function App() {
       localStorage.setItem('wakeTime', wakeTime);
       localStorage.setItem('blockedApps', JSON.stringify(blockedApps));
       localStorage.setItem('isTypingAnalysisOn', String(isTypingAnalysisOn));
+      localStorage.setItem('isEmotionalGuardOn', String(isEmotionalGuardOn));
+      localStorage.setItem('isScrollAnalysisOn', String(isScrollAnalysisOn));
       localStorage.setItem('typingSensitivity', String(typingSensitivity));
+      localStorage.setItem('scrollSensitivity', String(scrollSensitivity));
     } catch (error) {
       console.error('Failed to save to localStorage', error);
     }
-  }, [sleepTime, wakeTime, blockedApps, isTypingAnalysisOn, typingSensitivity]);
+  }, [sleepTime, wakeTime, blockedApps, isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn, typingSensitivity, scrollSensitivity]);
   
   // Clock effect
   useEffect(() => {
@@ -425,17 +720,27 @@ export default function App() {
     return snoozeUntil > currentTime;
   }, [snoozeUntil, currentTime]);
 
-  const blockType = isFatigueBlocked ? 'fatigue' : isActivityBlocked ? 'activity' : 'none';
+  const blockType: BlockType = useMemo(() => {
+    if (isEmotionBlocked) return 'emotion';
+    if (isFatigueBlocked) return 'fatigue';
+    if (isScrollBlocked) return 'scroll';
+    if (isActivityBlocked) return 'activity';
+    return 'none';
+  }, [isEmotionBlocked, isFatigueBlocked, isScrollBlocked, isActivityBlocked]);
 
   const handleSnooze = useCallback(() => {
     setSnoozeUntil(new Date(Date.now() + SNOOZE_DURATION_MS));
     setIsActivityBlocked(false);
     setIsFatigueBlocked(false);
+    setIsEmotionBlocked(false);
+    setIsScrollBlocked(false);
     activityCount.current = 0;
     typingStats.current = { keys: 0, backspaces: 0 };
-    setVisualTypingStats({ keys: 0, backspaces: 0 });
     if (typingAnalysisTimer.current) clearTimeout(typingAnalysisTimer.current);
+    if (scrollAnalysisTimer.current) clearTimeout(scrollAnalysisTimer.current);
     typingAnalysisTimer.current = null;
+    scrollAnalysisTimer.current = null;
+    scrollDelta.current = 0;
   }, []);
 
   const handleAddApp = useCallback((appName: string) => {
@@ -452,7 +757,6 @@ export default function App() {
   const handleActivity = useCallback(() => {
      if (!isSleepTime || isSnoozed || blockType !== 'none') return;
      
-     // App blocklist activity check
      const isAppCurrentlyBlocked = blockedApps.some(app => document.title.toLowerCase().includes(app.toLowerCase()));
      if (isAppCurrentlyBlocked && blockedApps.length > 0) {
         if (activityTimer.current) clearTimeout(activityTimer.current);
@@ -467,9 +771,8 @@ export default function App() {
   }, [isSleepTime, isSnoozed, blockType, blockedApps]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    handleActivity(); // Also check for generic activity on keydown
-
-    if (!isTypingAnalysisOn || !isSleepTime || isSnoozed || blockType !== 'none') return;
+    if ((event.target as HTMLElement).id === 'typing-sandbox') return;
+    if ((!isTypingAnalysisOn && !isEmotionalGuardOn) || !isSleepTime || isSnoozed || blockType !== 'none') return;
 
     const isBackspace = event.key === 'Backspace';
     
@@ -478,44 +781,67 @@ export default function App() {
         typingStats.current.backspaces += 1;
     }
 
-    setVisualTypingStats(prev => ({
-        keys: prev.keys + 1,
-        backspaces: isBackspace ? prev.backspaces + 1 : prev.backspaces,
-    }));
-
-
     if (!typingAnalysisTimer.current) {
         typingAnalysisTimer.current = window.setTimeout(() => {
             const { keys, backspaces } = typingStats.current;
             const errorRatio = keys > 0 ? backspaces / keys : 0;
-            const threshold = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS];
-
-            if (keys >= threshold.keys && errorRatio >= threshold.errorRatio) {
-                setIsFatigueBlocked(true);
+            
+            // Check for emotional agitation first
+            if (isEmotionalGuardOn && keys >= EMOTIONAL_KEY_THRESHOLD && errorRatio <= EMOTIONAL_ERROR_RATIO_MAX) {
+                setIsEmotionBlocked(true);
+            } 
+            // Then check for fatigue
+            else if (isTypingAnalysisOn) {
+                const threshold = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS];
+                if (keys >= threshold.keys && errorRatio >= threshold.errorRatio) {
+                    setIsFatigueBlocked(true);
+                }
             }
             
             typingStats.current = { keys: 0, backspaces: 0 };
-            setVisualTypingStats({ keys: 0, backspaces: 0 });
             typingAnalysisTimer.current = null;
         }, TYPING_ANALYSIS_WINDOW);
     }
-  }, [isSleepTime, isSnoozed, blockType, isTypingAnalysisOn, typingSensitivity, handleActivity]);
+  }, [isSleepTime, isSnoozed, blockType, isTypingAnalysisOn, isEmotionalGuardOn, typingSensitivity]);
+
+  const handleScroll = useCallback(() => {
+    if (!isScrollAnalysisOn || !isSleepTime || isSnoozed || blockType !== 'none') return;
+    
+    const currentScrollY = window.scrollY;
+    const delta = Math.abs(currentScrollY - lastScrollY.current);
+    lastScrollY.current = currentScrollY;
+    scrollDelta.current += delta;
+
+    if (!scrollAnalysisTimer.current) {
+        scrollAnalysisTimer.current = window.setTimeout(() => {
+            const threshold = SCROLL_SENSITIVITY_LEVELS[scrollSensitivity as keyof typeof SCROLL_SENSITIVITY_LEVELS];
+            if (scrollDelta.current >= threshold.distance) {
+                setIsScrollBlocked(true);
+            }
+            scrollDelta.current = 0;
+            scrollAnalysisTimer.current = null;
+        }, SCROLL_ANALYSIS_WINDOW);
+    }
+  }, [isSleepTime, isSnoozed, blockType, isScrollAnalysisOn, scrollSensitivity]);
 
   useEffect(() => {
     window.addEventListener('scroll', handleActivity);
+    window.addEventListener('scroll', handleScroll);
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
       if (activityTimer.current) clearTimeout(activityTimer.current);
       if (typingAnalysisTimer.current) clearTimeout(typingAnalysisTimer.current);
+      if (scrollAnalysisTimer.current) clearTimeout(scrollAnalysisTimer.current);
     };
-  }, [handleActivity, handleKeyDown]);
+  }, [handleActivity, handleKeyDown, handleScroll]);
 
   return (
-    <main className="min-h-screen text-slate-200 flex flex-col items-center p-4">
-      <div className="w-full flex flex-col items-center space-y-6">
+    <main className="min-h-screen text-slate-200 flex flex-col items-center p-4 sm:p-6 md:p-8">
+      <div className="w-full flex flex-col items-center space-y-8 max-w-2xl">
         <Header />
         <Dashboard
           currentTime={currentTime}
@@ -525,6 +851,13 @@ export default function App() {
           isSnoozed={isSnoozed}
           blockedAppsCount={blockedApps.length}
           isTypingAnalysisOn={isTypingAnalysisOn}
+          isEmotionalGuardOn={isEmotionalGuardOn}
+          isScrollAnalysisOn={isScrollAnalysisOn}
+        />
+        <TypingSandbox
+            isTypingAnalysisOn={isTypingAnalysisOn}
+            isEmotionalGuardOn={isEmotionalGuardOn}
+            typingSensitivity={typingSensitivity}
         />
         <Settings
           sleepTime={sleepTime}
@@ -537,8 +870,16 @@ export default function App() {
             onToggle={setIsTypingAnalysisOn}
             typingSensitivity={typingSensitivity}
             onSensitivityChange={(e) => setTypingSensitivity(Number(e.target.value))}
-            visualTypingStats={visualTypingStats}
-            isSleepTime={isSleepTime}
+        />
+        <ScrollAnalysisSettings
+            isScrollAnalysisOn={isScrollAnalysisOn}
+            onToggle={setIsScrollAnalysisOn}
+            scrollSensitivity={scrollSensitivity}
+            onSensitivityChange={(e) => setScrollSensitivity(Number(e.target.value))}
+        />
+        <EmotionalGuardSettings
+            isEmotionalGuardOn={isEmotionalGuardOn}
+            onToggle={setIsEmotionalGuardOn}
         />
         <BlocklistSettings
             blockedApps={blockedApps}
