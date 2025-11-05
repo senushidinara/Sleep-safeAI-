@@ -1,53 +1,54 @@
 # Sleep Safe 😴🛡️✨
 
-### Your intelligent digital wellness journal.
+### Your intelligent digital wellness dashboard.
 
-> An innovative application that analyzes conversational patterns—both typing mechanics and sentiment—to provide insights into your digital well-being and promote healthier habits.
+> An innovative application that analyzes conversational patterns—both typing mechanics and sentiment—to provide a comprehensive psychological analysis, visual trend summaries, and a personalized, actionable wellness plan.
 
-Sleep Safe is your personal guardian for digital wellness. 🌙 It uses a **smart, privacy-first, behavior-based approach** to help you understand your state of mind during digital interactions, all wrapped in a beautiful, customizable, and intuitive interface.
+Sleep Safe is your personal guardian for digital wellness. 🌙 It uses a **smart, privacy-first, behavior-based approach** to help you understand your state of mind. It now provides a full suite of tools, from real-time analysis to a final, comprehensive report, all wrapped in a beautiful and intuitive interface.
 
 ---
 
 ## ✨ Key Features
 
-*   **🎨 Dynamic Theming:** Your space, your style. Choose from multiple warm and inviting themes like "Sunset," "Ocean," or "Twilight" to personalize your experience.
+*   **🎨 Dynamic Theming:** Your space, your style. Choose from multiple warm themes like "Sunset," "Ocean," or "Twilight" to personalize your experience.
 *   **🧠 Dual-Layer Psychological Analysis:** The core of the app. It goes beyond simple metrics.
-    *   **Typing Pattern Analysis:** Analyzes *how* you type—not *what* you type—to detect patterns of fatigue (high correction rate) or emotional agitation (rapid, error-free typing).
-    *   **Sentiment Analysis (New!):** Powered by the Gemini API, it analyzes the emotional tone of your messages, identifying them as Positive, Negative, or Neutral.
-*   **📊 Instant, Combined Insights:** After every message, receive a comprehensive analysis card showing your typing pattern and sentiment, giving you a holistic snapshot of your mindset in that moment.
-*   **📓 Persistent Session Journal (New!):** Your analysis history is now automatically saved to a journal. Track your patterns over time, reflect on your conversations, and gain a deeper understanding of your digital habits.
-*   **💬 AI-Powered Conversation:** Engage in a thoughtful conversation with a sleep and wellness-focused AI that helps guide the session and provides a context for the analysis.
-*   **🔒 Completely Private:** All analysis happens in your browser. Your conversations and typing data are never stored on a server or sent anywhere, ensuring your complete privacy.
+    *   **Typing Pattern Analysis:** Analyzes *how* you type to detect patterns of fatigue or emotional agitation.
+    *   **Sentiment Analysis:** Powered by the Gemini API, it analyzes the emotional tone of your messages (Positive, Negative, or Neutral).
+*   **📊 Session Summary & Trend Analysis (New!):** Get an at-a-glance overview of your entire session with a dynamic summary card that includes:
+    *   **Overall Sentiment & Dominant Typing Pattern:** Understand your main tendencies.
+    *   **Visual Sentiment Chart:** A simple bar chart visually breaks down your emotional trends.
+*   **🚀 Comprehensive Final Analysis & Sleep Plan:** This is the ultimate goal of your session. After your conversation, the app synthesizes the entire chat transcript and all your psychological data, using the powerful **`gemini-2.5-pro`** model to generate:
+    *   A **holistic analysis** of your session, rendered in beautiful Markdown.
+    *   A **personalized, actionable sleep plan** with concrete steps.
+*   **💾 Full User Control (New!):**
+    *   **Export Session:** Download a complete `.txt` file of your entire session, including the chat, journal, and final plan.
+    *   **Reset Session:** Start fresh at any time with a confirmation-protected reset button.
+*   **📓 Session Journal:** Track your per-message analysis history. Reflect on your conversations and gain a deeper understanding of your digital habits in the moment.
+*   **🔒 Completely Private:** All analysis happens in your browser. Your data is managed via `localStorage`, ensuring your complete privacy.
 
 ---
 
 ## 🖼️ App Preview
 
-A glimpse into the clean, intuitive, and powerful interface of Sleep Safe.
+A glimpse into the clean, spacious, and powerful new interface of Sleep Safe.
 
-### ✨ The Interactive Analysis Session
+### ✨ The Complete Wellness Dashboard
 
-Your mission control for digital wellness. Engage with the AI, and see instant psychological feedback after every message you send.
+The app now features a professional two-column layout. The immersive chat session is on the left, with all your analysis tools and settings neatly organized in a tabbed panel on the right.
 
-*(Screenshot description: The main view of the app showing the chat interface next to the analysis settings. The UI has a warm, sunset-themed color palette.)*
+*(Screenshot description: The main view of the app showing the two-column layout. On the left is a large chat interface. On the right is a side panel with tabs for "Analysis" and "Settings". The "Analysis" tab is active, showing the new Session Summary card with a sentiment bar chart at the top.)*
 
-### 🔬 The Insight Card
+### 🔬 The Formatted Analysis & Personalized Plan
 
-See the magic happen in real-time! After each message, a card appears showing the dual-layer analysis: your typing pattern (e.g., "Fatigue") and the message's sentiment (e.g., "Negative").
+The culmination of your session. The final report is now rendered with beautiful Markdown formatting, making it easy to read and act upon.
 
-*(Screenshot description: A close-up of the analysis card, displaying "Typing Pattern: Fatigue" and "Sentiment: Neutral" with confidence bars.)*
+*(Screenshot description: A close-up of the "Final Analysis & Sleep Plan" section, which displays a generated report with proper headings, bold text, and numbered lists, making it look like a professional document.)*
 
-### 🎨 Personalize Your Experience
+### ⚙️ Full Control & Journaling
 
-Tailor Sleep Safe to your mood with the new theme switcher. Fine-tune the sensitivity of the behavioral analysis with simple, clear controls.
+Easily switch between viewing your final plan, reviewing your per-message journal, and fine-tuning the analysis settings. New controls for exporting and resetting your session are clearly accessible.
 
-*(Screenshot description: The settings area, showing toggles for Fatigue Analysis and Emotional Typing, along with the sensitivity slider and the new theme selection buttons.)*
-
-### 📓 Your Session Journal
-
-Track your progress and reflect on your mindset over time. The journal provides a log of all analyses from your session, creating a valuable record of your digital well-being journey.
-
-*(Screenshot description: The "Session Journal" section, displaying a list of past analysis entries, each with a timestamp, typing pattern, and sentiment.)*
+*(Screenshot description: The right-side panel showing the "Settings" tab with toggles, the sensitivity slider, and the new "Reset Session" button. Another view shows the "Analysis" tab with the "Export Session" button.)*
 
 ---
 
@@ -55,12 +56,12 @@ Track your progress and reflect on your mindset over time. The journal provides 
 
 ### 🏗️ High-Level Architecture
 
-Sleep Safe operates through a cohesive system of a conversational UI, a dual-layer analysis engine, and a reactive interface that includes persistent state.
+Sleep Safe operates on a powerful two-part structure: a real-time, per-message analysis loop, and a final, session-wide synthesis step, now with added data management controls.
 
 ```
                                   ┌───────────────────────────┐
                                   │   Sleep Safe UI/UX 🎨     │
-                                  │ (Chat, Settings, Journal) │
+                                  │ (Dashboard: Chat + Panel) │
                                   └─────────────▲─────────────┘
                                                 │ Renders State
                                   ┌─────────────┴─────────────┐
@@ -68,39 +69,33 @@ Sleep Safe operates through a cohesive system of a conversational UI, a dual-lay
                                   │ (React State, Hooks, Logic) │
                                   └─────────────┬─────────────┘
                                                 │
-                 ┌──────────────────────────────┼──────────────────────────────┐
-                 │                              │                              │
-                 ▼                              ▼                              ▼
-┌───────────────────────────┐   ┌───────────────────────────┐   ┌───────────────────────────┐
-│  Real-time Event Capture  │   │  Psychological Analysis 🧠  │   │   Browser Storage 💾    │
-│  (Typing within chat)     │──▶│  (Typing + Sentiment)     │──▶│ (localStorage for state)│
-└───────────────────────────┘   └─────────────┬─────────────┘   └───────────────────────────┘
-                                              │
-                                              ▼
-                                  ┌───────────────────────────┐
-                                  │  Insight Card & Journal   │
-                                  │  (Displays results)       │
-                                  └───────────────────────────┘
+                 ┌──────────────────────────────┼────────────────────────────────┐
+                 │                              │                                │
+                 ▼                              ▼                                ▼
+┌───────────────────────────┐   ┌───────────────────────────┐     ┌───────────────────────────────┐
+│  Per-Message Analysis Loop│   │    Session-Wide Synthesis   │     │      Data Management &        │
+│  (Typing + Sentiment)     │   │ (User-Triggered Final Plan) │     │  Storage (Export, Reset, LS)  │
+└───────────────────────────┘   └───────────────────────────┘     └───────────────────────────────┘
 ```
 
 <details>
 <summary><strong>🧠 The Psychological Analysis Suite (Click to Expand)</strong></summary>
 
-This is the feature that makes the app truly intelligent. It provides a multi-faceted view of your digital interactions.
-
-### **🔒 Privacy is Paramount**
-
-**The app does NOT record what you type for any purpose other than immediate, in-browser analysis.** The `Sentiment Analysis` sends only the current message's text to the Gemini API for processing and the result is immediately returned—the text is not stored by Google. The typing analysis is purely statistical, happens **entirely within your browser**, and is immediately discarded after each message.
+This suite is a two-stage process: continuous insight followed by a conclusive summary.
 
 ### **🤔 Identifying Human Patterns**
 
-*   **😴 Fatigue Typing:** When we're tired, our typing often becomes frantic and error-prone. We type quickly but make more mistakes, leading to a high rate of corrections (`Backspace`).
-*   **😠 Agitated Typing:** When we're frustrated or agitated, we tend to type very quickly but with unusual precision and fewer errors.
-*   **😊 Sentiment & Tone:** The words we choose convey powerful emotional information. The app leverages a powerful language model to understand this underlying tone.
+*   **😴 Fatigue Typing:** High typing intensity + high correction rate.
+*   **😠 Agitated Typing:** Very high typing speed + low correction rate.
+*   **😊 Sentiment & Tone:** The underlying emotional content of the text.
 
-### **🔢 Analysis Flow Breakdown (Per Message)**
+### **🔢 Analysis Flow Breakdown**
 
-The process is triggered every time you send a message in the interactive session:
+The process has two distinct phases:
+
+#### Phase 1: Real-time, Per-Message Analysis (The Loop)
+
+This happens every time you send a message, feeding the Session Summary and Journal.
 
 ```
 [ User Action: Clicks "Send" 💬 ]
@@ -108,47 +103,66 @@ The process is triggered every time you send a message in the interactive sessio
             ▼
 ┌──────────────────────────┐
 │ 1. Local Typing Analysis │
-│  (Count Keys/Backspaces  │
-│    from the last input)  │
+│  (Count Keys/Backspaces) │
 └───────────┬────────────┘
             │
             ▼
 ┌──────────────────────────┐
 │ 2. API Sentiment Analysis│
-│  (Sends message text to  │
-│    Gemini for analysis)  │
+│  (Sends message to Gemini)│
 └───────────┬────────────┘
             │
             ▼
 ┌──────────────────────────┐
-│    Combine Results       │
-│  (Typing Pattern +       │
-│     Sentiment)           │
-└───────────┬────────────┘
-            │
-            ▼
-      ┌───────────┐
-      │ Display & │
-      │   Log     ├─▶ Show Insight Card
-      └─────┬─────┘
-            │
-            ▼
-┌──────────────────────────┐
-│   Add to Session Journal │
-│   (Save in localStorage) │
+│    Display & Log Insight │
+│ (Show in chat, add to   │
+│ Journal, update Summary) │
 └──────────────────────────┘
+```
+
+#### Phase 2: Final, Session-Wide Analysis (The Conclusion)
+
+This is a user-initiated process that provides the ultimate value of the session:
+
+```
+[ User Action: Clicks "Generate Final Plan" 🚀 ]
+            │
+            ▼
+┌──────────────────────────┐
+│ 1. Synthesize All Data   │
+│ - Entire Chat Transcript │
+│ - Full Session Journal   │
+└───────────┬────────────┘
+            │
+            ▼
+┌──────────────────────────┐
+│ 2. Construct Master Prompt │
+│ (Instruct AI to act as a │
+│   wellness coach)        │
+└───────────┬────────────┘
+            │
+            ▼
+┌──────────────────────────┐
+│ 3. Send to Gemini 2.5 Pro│
+│ (Leverage powerful model │
+│ for deep analysis)       │
+└───────────┬────────────┘
+            │
+            ▼
+    ┌───────────────────┐
+    │ Render Markdown   ├─▶ Show Final Analysis &
+    │      Report       │    Personalized Sleep Plan
+    └───────────────────┘
 
 ```
 
-1.  **Capturing Typing Data:** As you type your message, the app keeps a simple, in-memory count of total keystrokes and corrections for that message only.
+1.  **Synthesizing Data:** When you request the final plan, the app gathers every piece of data from your session: every message from you and the bot, and every single analysis entry from the journal.
 
-2.  **Triggering Analysis on Send:** When you hit "Send," two processes fire simultaneously:
-    *   The **local typing analysis** compares your keystroke and correction data against the sensitivity thresholds you've set to determine a "Typing Pattern" (Fatigue, Emotion, or Stable).
-    *   The **sentiment analysis** sends the text of your message to the Gemini API, which returns a sentiment classification (Positive, Negative, or Neutral).
+2.  **Constructing the Prompt:** This data is compiled into a single, comprehensive prompt that instructs the `gemini-2.5-pro` model to act as a wellness expert and generate a final analysis and actionable plan.
 
-3.  **Displaying Combined Insight:** The results are combined into a single, easy-to-read "Insight Card" that shows you the analysis for the message you just sent.
+3.  **Generating the Plan:** The powerful model processes the entire context of your session to provide insights and suggestions that are far more nuanced and personalized than a single-message analysis could ever be.
 
-4.  **Logging to the Journal:** This combined analysis object is then added to your Session Journal, which is saved in your browser's `localStorage` so you can review it anytime during your session.
+4.  **Displaying the Result:** The final report is rendered using a Markdown parser into a clean, readable format, giving you a clear takeaway and concrete steps to improve your well-being.
 
-The counters then reset, and the app waits for your next message. This makes a complex, dual-layer analysis feel simple, transparent, and instantaneous.
+This two-phase approach provides the best of both worlds: immediate, granular feedback during your conversation, and a powerful, holistic conclusion when you're ready for it.
 </details>
