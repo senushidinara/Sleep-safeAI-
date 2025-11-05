@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef, FC } from 'react';
-import { GoogleGenAI, Chat } from '@google/genai';
+import { GoogleGenAI, Chat, Type } from '@google/genai';
 
 // --- CONSTANTS ---
 const EMOTIONAL_KEY_THRESHOLD = 40; // High speed typing
@@ -91,6 +91,13 @@ const ClipboardDocumentListIcon: FC<{ className?: string }> = ({ className }) =>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
         <path fillRule="evenodd" d="M10.5 3A2.25 2.25 0 008.25 5.25v.057a3.743 3.743 0 014.5 0V5.25A2.25 2.25 0 0010.5 3zM6 5.25a3.75 3.75 0 007.5 0V5.25a2.25 2.25 0 012.25-2.25H18a3.75 3.75 0 013.75 3.75v10.5A3.75 3.75 0 0118 21H6a3.75 3.75 0 01-3.75-3.75V9A3.75 3.75 0 016 5.25zM12 9a.75.75 0 01.75.75v.008a.75.75 0 01-1.5 0V9.75A.75.75 0 0112 9z" clipRule="evenodd" />
         <path d="M11.24 12.006a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25zM15.74 12.006a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25zM11.24 16.506a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25zM15.74 16.506a.75.75 0 10-1.06-1.06l-2.25 2.25a.75.75 0 001.06 1.06l2.25-2.25z" />
+    </svg>
+);
+
+const SparklesIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path fillRule="evenodd" d="M9.315 7.584C12.195 3.883 16.695 1.5 21.75 1.5a.75.75 0 01.75.75c0 5.056-2.383 9.555-6.084 12.436A6.75 6.75 0 019.75 22.5a.75.75 0 01-.75-.75v-7.19c0-1.767.96-3.364 2.47-4.116zM14.25 10.5a.75.75 0 00-1.5 0v2.69a.75.75 0 001.5 0v-2.69z" clipRule="evenodd" />
+        <path d="M3.75 12.75a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75zM8.25 8.625a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75zM3.75 17.25a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75zM8.25 13.125a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75zM12.75 8.625a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75zM12.75 17.25a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75z" />
     </svg>
 );
 
@@ -210,6 +217,10 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
     const [lastTypingAnalysis, setLastTypingAnalysis] = useState<AnalysisResult | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     
+    // State for Smart Prompts feature
+    const [smartPrompts, setSmartPrompts] = useState<string[]>([]);
+    const [isFetchingPrompts, setIsFetchingPrompts] = useState(false);
+
     const typingStats = useRef({ keys: 0, backspaces: 0 });
     const ai = useRef<GoogleGenAI | null>(null);
 
@@ -333,6 +344,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         const userMessage = inputValue.trim();
         if (userMessage === '' || isBotReplying) return;
         
+        setSmartPrompts([]); // Clear prompts on send
         setMessages(prev => [...prev, { author: 'user', text: userMessage }]);
         setInputValue('');
         setIsBotReplying(true);
@@ -355,6 +367,65 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             setIsBotReplying(false);
         }
     };
+    
+    const generateSmartPrompts = useCallback(async () => {
+        if (!ai.current) return;
+        setIsFetchingPrompts(true);
+        try {
+            const getTimeOfDay = () => {
+                const hour = new Date().getHours();
+                if (hour >= 5 && hour < 12) return 'morning';
+                if (hour >= 12 && hour < 18) return 'afternoon';
+                if (hour >= 18 && hour < 23) return 'evening';
+                return 'late night';
+            };
+
+            const timeOfDay = getTimeOfDay();
+            const userStateContext = lastTypingAnalysis ?
+                `The user's last detected sentiment was '${lastTypingAnalysis.sentiment}' on the topic of '${lastTypingAnalysis.theme}'. Their cognitive load was ${lastTypingAnalysis.cognitiveLoad}/100.` :
+                "The user is just starting the session.";
+
+            const prompt = `You are a creative assistant for a wellness app. Your task is to generate 3 short, gentle, and open-ended conversation starters as questions.
+            Context:
+            - It is currently ${timeOfDay}.
+            - ${userStateContext}
+            - The user is talking to a supportive AI assistant about their well-being and sleep.
+            - The prompts should encourage reflection and be under 15 words.
+            Return the response as a JSON array of 3 strings. Example: ["What's on your mind this evening?", "How are you feeling right now?"]`;
+
+            const response = await ai.current.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING },
+                    },
+                },
+            });
+
+            const result = JSON.parse(response.text);
+            if (Array.isArray(result) && result.every(item => typeof item === 'string')) {
+                setSmartPrompts(result);
+            }
+        } catch (error) {
+            console.error("Failed to generate smart prompts:", error);
+        } finally {
+            setIsFetchingPrompts(false);
+        }
+    }, [lastTypingAnalysis]);
+
+    useEffect(() => {
+        const shouldGenerate = !isBotReplying && !inputValue && !isFetchingPrompts && smartPrompts.length === 0 && (isTypingAnalysisOn || isEmotionalGuardOn);
+        if (shouldGenerate) {
+            generateSmartPrompts();
+        }
+        if (inputValue && smartPrompts.length > 0) {
+            setSmartPrompts([]);
+        }
+    }, [isBotReplying, inputValue, messages, generateSmartPrompts, isFetchingPrompts, smartPrompts.length, isTypingAnalysisOn, isEmotionalGuardOn]);
+
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -407,6 +478,28 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
                     }}
                     onDismiss={() => setCognitiveInsight(null)}
                 />
+            )}
+             {smartPrompts.length > 0 && !inputValue && !isBotReplying && (
+                <div className="mb-4 animate-fade-in">
+                    <div className="flex items-center gap-2 mb-2">
+                        <SparklesIcon className="w-5 h-5 text-[--accent-primary]" />
+                        <h4 className="text-base font-semibold text-[--text-secondary]">Feeling stuck? Try one of these:</h4>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {smartPrompts.map((prompt, index) => (
+                            <button
+                                key={index}
+                                onClick={() => {
+                                    setInputValue(prompt);
+                                    setSmartPrompts([]);
+                                }}
+                                className="px-3 py-1.5 bg-[--bg-primary] text-[--text-primary] rounded-full text-base border border-[--border-color] hover:bg-[--accent-primary] hover:text-white hover:border-[--accent-primary] transition-colors"
+                            >
+                                {prompt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             )}
             <form onSubmit={handleSendMessage} className="flex gap-3 mb-2">
                 <textarea
