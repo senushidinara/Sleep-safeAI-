@@ -1,0 +1,5 @@
+{
+  "name": "Sleep Safe",
+  "description": "An application that monitors late-night scrolling and typing to encourage healthier sleep habits by displaying a reminder to rest.",
+  "requestFramePermissions": []
+}
