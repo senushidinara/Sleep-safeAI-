@@ -80,6 +80,12 @@ const ArrowsUpDownIcon: FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const ExclamationTriangleIcon: FC<{ className?: string }> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+    <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
+  </svg>
+);
+
 
 // --- UI COMPONENTS ---
 
@@ -118,11 +124,11 @@ const BlockingOverlay: FC<BlockingOverlayProps> = ({ onSnooze, blockType }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-fade-in">
       <div className="bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center border border-slate-700 transform transition-all animate-scale-in">
         <MoonIcon className="w-16 h-16 text-violet-400 mx-auto mb-6" />
-        <h2 className="text-4xl font-bold text-slate-100 mb-3">{title}</h2>
-        <p className="text-slate-400 mb-8 text-lg">{body}</p>
+        <h2 className="text-5xl font-bold text-slate-100 mb-3">{title}</h2>
+        <p className="text-slate-400 mb-8 text-xl">{body}</p>
         <button
           onClick={onSnooze}
-          className="w-full bg-violet-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition-colors duration-200 text-lg"
+          className="w-full bg-violet-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition-colors duration-200 text-xl"
         >
           Snooze for 5 minutes
         </button>
@@ -137,13 +143,41 @@ const BlockingOverlay: FC<BlockingOverlayProps> = ({ onSnooze, blockType }) => {
   );
 };
 
+interface ErrorBannerProps {
+    message: string | null;
+    onDismiss: () => void;
+}
+
+const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss }) => {
+  if (!message) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full bg-red-600 text-white p-4 rounded-lg shadow-lg flex items-start animate-fade-in" role="alert">
+      <div className="flex-shrink-0">
+        <ExclamationTriangleIcon className="w-6 h-6" />
+      </div>
+      <div className="ml-3">
+        <p className="font-bold text-lg">Could Not Save Settings</p>
+        <p className="text-base mt-1">{message}</p>
+      </div>
+      <button 
+        onClick={onDismiss} 
+        className="ml-auto -mr-1 -mt-1 p-1 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-white"
+        aria-label="Dismiss"
+      >
+        <XCircleIcon className="w-5 h-5" />
+      </button>
+    </div>
+  );
+};
+
 const Header: FC = () => (
   <header className="text-center p-6">
     <div className="flex items-center justify-center gap-4">
       <MoonIcon className="w-10 h-10 text-violet-400" />
-      <h1 className="text-5xl font-bold text-slate-100 tracking-tight">Sleep Safe</h1>
+      <h1 className="text-6xl font-bold text-slate-100 tracking-tight">Sleep Safe</h1>
     </div>
-    <p className="text-slate-400 mt-4 text-lg max-w-prose">Block addictive apps and protect your sleep from late-night digital habits.</p>
+    <p className="text-slate-400 mt-4 text-xl max-w-prose">Block addictive apps and protect your sleep from late-night digital habits.</p>
   </header>
 );
 
@@ -178,14 +212,14 @@ const Dashboard: FC<DashboardProps> = ({ currentTime, sleepTime, wakeTime, isSle
   return (
     <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-semibold text-slate-100">Status</h2>
+        <h2 className="text-4xl font-semibold text-slate-100">Status</h2>
         <div className="flex items-center gap-2">
           <div className={`w-3 h-3 rounded-full ${status.color} animate-pulse`}></div>
-          <span className="text-slate-300 font-medium text-lg">{status.text}</span>
+          <span className="text-slate-300 font-medium text-xl">{status.text}</span>
         </div>
       </div>
       <div className="text-center mb-6">
-        <p className="text-7xl font-mono font-bold text-slate-50 tracking-wider">
+        <p className="text-8xl font-mono font-bold text-slate-50 tracking-wider">
           {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
@@ -194,28 +228,28 @@ const Dashboard: FC<DashboardProps> = ({ currentTime, sleepTime, wakeTime, isSle
           <p className="text-slate-400">Bedtime</p>
           <div className="flex items-center gap-2 mt-1">
             <MoonIcon className="w-6 h-6 text-slate-500" />
-            <p className="text-2xl font-semibold text-slate-200">{sleepTime}</p>
+            <p className="text-3xl font-semibold text-slate-200">{sleepTime}</p>
           </div>
         </div>
         <div className="flex flex-col items-center">
           <p className="text-slate-400">Wake up</p>
           <div className="flex items-center gap-2 mt-1">
             <SunIcon className="w-6 h-6 text-slate-500" />
-            <p className="text-2xl font-semibold text-slate-200">{wakeTime}</p>
+            <p className="text-3xl font-semibold text-slate-200">{wakeTime}</p>
           </div>
         </div>
         <div className="flex flex-col items-center">
           <p className="text-slate-400">Blocked Apps</p>
           <div className="flex items-center gap-2 mt-1">
             <ShieldCheckIcon className="w-6 h-6 text-slate-500" />
-            <p className="text-2xl font-semibold text-slate-200">{blockedAppsCount}</p>
+            <p className="text-3xl font-semibold text-slate-200">{blockedAppsCount}</p>
           </div>
         </div>
         <div className="flex flex-col items-center">
           <p className="text-slate-400">Behavioral Analysis</p>
           <div className="flex items-center gap-2 mt-1">
             <BrainIcon className="w-6 h-6 text-slate-500" />
-            <p className={`text-2xl font-semibold ${analysisStatus.color}`}>{analysisStatus.text}</p>
+            <p className={`text-3xl font-semibold ${analysisStatus.color}`}>{analysisStatus.text}</p>
           </div>
         </div>
       </div>
@@ -232,26 +266,26 @@ interface SettingsProps {
 
 const Settings: FC<SettingsProps> = ({ sleepTime, wakeTime, onSleepTimeChange, onWakeTimeChange }) => (
   <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
-    <h2 className="text-3xl font-semibold text-slate-100 mb-6">Your Schedule</h2>
+    <h2 className="text-4xl font-semibold text-slate-100 mb-6">Your Schedule</h2>
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <div>
-        <label htmlFor="sleepTime" className="block text-base font-medium text-slate-400 mb-2">Bedtime</label>
+        <label htmlFor="sleepTime" className="block text-lg font-medium text-slate-400 mb-2">Bedtime</label>
         <input
           type="time"
           id="sleepTime"
           value={sleepTime}
           onChange={onSleepTimeChange}
-          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
         />
       </div>
       <div>
-        <label htmlFor="wakeTime" className="block text-base font-medium text-slate-400 mb-2">Wake up</label>
+        <label htmlFor="wakeTime" className="block text-lg font-medium text-slate-400 mb-2">Wake up</label>
         <input
           type="time"
           id="wakeTime"
           value={wakeTime}
           onChange={onWakeTimeChange}
-          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
         />
       </div>
     </div>
@@ -277,17 +311,17 @@ const BlocklistSettings: FC<BlocklistSettingsProps> = ({ blockedApps, onAddApp, 
 
     return (
         <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
-            <h2 className="text-3xl font-semibold text-slate-100 mb-6">App Blocklist</h2>
+            <h2 className="text-4xl font-semibold text-slate-100 mb-6">App Blocklist</h2>
             <form onSubmit={handleAdd} className="flex gap-3 mb-4">
                 <input
                     type="text"
                     value={newApp}
                     onChange={(e) => setNewApp(e.target.value)}
                     placeholder="e.g., 'YouTube', 'Reddit'"
-                    className="flex-grow bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+                    className="flex-grow bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
                     aria-label="Add app to blocklist"
                 />
-                <button type="submit" className="bg-violet-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-violet-700 transition-colors duration-200 text-lg">
+                <button type="submit" className="bg-violet-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-violet-700 transition-colors duration-200 text-xl">
                     Add
                 </button>
             </form>
@@ -295,14 +329,14 @@ const BlocklistSettings: FC<BlocklistSettingsProps> = ({ blockedApps, onAddApp, 
                 {blockedApps.length > 0 ? (
                     blockedApps.map((app) => (
                         <div key={app} className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in">
-                            <span className="text-slate-300 text-lg break-all">{app}</span>
+                            <span className="text-slate-300 text-xl break-all">{app}</span>
                             <button onClick={() => onRemoveApp(app)} className="text-slate-500 hover:text-red-400 ml-3" aria-label={`Remove ${app} from blocklist`}>
                                 <XCircleIcon className="w-7 h-7 flex-shrink-0" />
                             </button>
                         </div>
                     ))
                 ) : (
-                    <p className="text-slate-500 text-center py-4 text-lg">No apps on your blocklist.</p>
+                    <p className="text-slate-500 text-center py-4 text-xl">No apps on your blocklist.</p>
                 )}
             </div>
         </div>
@@ -410,92 +444,99 @@ const TypingSandbox: FC<TypingSandboxProps> = ({ typingSensitivity, isTypingAnal
     const errorRate = visualTypingStats.keys > 0 ? (visualTypingStats.backspaces / visualTypingStats.keys) : 0;
     const errorPercent = threshold.errorRatio > 0 ? Math.min(100, (errorRate / threshold.errorRatio) * 100) : 0;
 
-    const intensityBarColor = intensityPercent >= 100 ? 'bg-red-500' : intensityPercent >= 75 ? 'bg-yellow-500' : 'bg-violet-500';
-    const errorBarColor = errorPercent >= 100 ? 'bg-red-500' : errorPercent >= 75 ? 'bg-yellow-500' : 'bg-pink-500';
+    const getBarColor = (percent: number) => {
+        if (percent >= 100) return 'bg-red-500';
+        if (percent >= 75) return 'bg-yellow-500';
+        return 'bg-blue-500';
+    };
+    
+    const intensityBarColor = getBarColor(intensityPercent);
+    const errorBarColor = getBarColor(errorPercent);
 
     return (
-        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
-            <div className="flex items-center gap-3 mb-4">
-                <BeakerIcon className="w-8 h-8 text-slate-400" />
-                <h2 className="text-3xl font-semibold text-slate-100">Analysis Sandbox</h2>
-            </div>
-            <p className="text-slate-400 text-base mb-6">
-                Type in the box below to see how the behavioral analysis works in real-time. This is a safe test area and will not trigger the block screen.
-            </p>
+        <>
             <textarea
                 id="typing-sandbox"
                 value={text}
                 onChange={handleTextChange}
                 onKeyDown={handleKeyDown}
                 placeholder={(!isTypingAnalysisOn && !isEmotionalGuardOn) ? "Enable an analysis to begin..." : "Start typing here..."}
-                className="w-full h-28 bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mb-6 resize-none disabled:opacity-50"
+                className="w-full h-28 bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mb-6 resize-none disabled:opacity-50"
                 aria-label="Typing analysis sandbox"
                 disabled={!isTypingAnalysisOn && !isEmotionalGuardOn}
             />
              <div className="grid grid-cols-2 gap-4 text-center mb-6 border-b border-slate-700/50 pb-6">
                 <div>
-                    <p className="text-slate-400 text-sm font-medium">Keys Pressed</p>
-                    <p className="text-4xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.keys}</p>
+                    <p className="text-slate-400 text-base font-medium">Keys Pressed</p>
+                    <p className="text-5xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.keys}</p>
                 </div>
                 <div>
-                    <p className="text-slate-400 text-sm font-medium">Backspaces</p>
-                    <p className="text-4xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.backspaces}</p>
+                    <p className="text-slate-400 text-base font-medium">Backspaces</p>
+                    <p className="text-5xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.backspaces}</p>
                 </div>
             </div>
              <div className="space-y-4">
                  <div>
-                     <div className="flex justify-between items-center text-base mb-1">
+                     <div className="flex justify-between items-center text-lg mb-1">
                          <div className="flex items-center gap-2">
-                            <span className="text-slate-400">Typing Intensity</span>
-                            {isAnalyzing && <span className="text-blue-400 text-sm animate-pulse">Analyzing...</span>}
+                            <span className="text-slate-400">Typing Speed</span>
+                            {isAnalyzing && <span className="text-blue-400 text-base animate-pulse">Analyzing...</span>}
                          </div>
-                         <span className="text-slate-300 font-mono">{visualTypingStats.keys} / {threshold.keys}</span>
+                         <span className="text-slate-300 font-mono">{intensityPercent.toFixed(0)}%</span>
                      </div>
                      <div className="w-full bg-slate-700 rounded-full h-3">
                          <div className={`${intensityBarColor} h-3 rounded-full transition-all duration-200`} style={{ width: `${intensityPercent}%` }}></div>
                      </div>
                  </div>
                  <div>
-                     <div className="flex justify-between items-center text-base mb-1">
-                         <span className="text-slate-400">Error Rate</span>
-                         <span className="text-slate-300 font-mono">{(errorRate * 100).toFixed(0)}% / {(threshold.errorRatio * 100).toFixed(0)}%</span>
+                     <div className="flex justify-between items-center text-lg mb-1">
+                         <span className="text-slate-400">Correction Rate</span>
+                         <span className="text-slate-300 font-mono">{errorPercent.toFixed(0)}%</span>
                      </div>
                      <div className="w-full bg-slate-700 rounded-full h-3">
                          <div className={`${errorBarColor} h-3 rounded-full transition-all duration-200`} style={{ width: `${errorPercent}%` }}></div>
                      </div>
                  </div>
                  {analysisResult && (
-                    <div className="mt-4 text-center p-4 bg-slate-700/50 rounded-lg animate-fade-in">
-                        <p className="text-violet-300 font-medium text-base">{analysisResult}</p>
+                    <div className="mt-4 text-left p-4 bg-slate-700/50 rounded-lg animate-fade-in">
+                        <p className="text-violet-300 font-medium text-lg text-center mb-3">{analysisResult}</p>
                         {lastAnalysisStats?.confidence != null && (
                             <div className="mt-2">
-                                <span className="text-slate-400 text-sm">Confidence: </span>
-                                <span className="text-2xl font-bold text-white">{lastAnalysisStats.confidence}%</span>
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-slate-400 text-base font-medium">Detection Confidence</span>
+                                    <span className="text-xl font-bold text-white font-mono">{lastAnalysisStats.confidence}%</span>
+                                </div>
+                                <div className="w-full bg-slate-600 rounded-full h-2">
+                                    <div 
+                                        className="bg-green-400 h-2 rounded-full" 
+                                        style={{ width: `${lastAnalysisStats.confidence}%` }}>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
                  )}
                  {lastAnalysisStats && (
                     <div className="mt-6 pt-4 border-t border-slate-700/50 animate-fade-in">
-                        <h3 className="text-lg font-semibold text-slate-300 mb-3 text-center">Detailed Analysis (Last 4s)</h3>
+                        <h3 className="text-xl font-semibold text-slate-300 mb-3 text-center">Detailed Analysis (Last 4s)</h3>
                         <div className="grid grid-cols-3 gap-4 text-center">
                             <div>
-                                <p className="text-slate-400 text-sm">Keys Pressed</p>
-                                <p className="text-2xl font-bold text-slate-100">{lastAnalysisStats.keys}</p>
+                                <p className="text-slate-400 text-base">Keys Pressed</p>
+                                <p className="text-3xl font-bold text-slate-100">{lastAnalysisStats.keys}</p>
                             </div>
                             <div>
-                                <p className="text-slate-400 text-sm">Backspaces</p>
-                                <p className="text-2xl font-bold text-slate-100">{lastAnalysisStats.backspaces}</p>
+                                <p className="text-slate-400 text-base">Backspaces</p>
+                                <p className="text-3xl font-bold text-slate-100">{lastAnalysisStats.backspaces}</p>
                             </div>
                             <div>
-                                <p className="text-slate-400 text-sm">Error Ratio</p>
-                                <p className="text-2xl font-bold text-slate-100">{(lastAnalysisStats.errorRatio * 100).toFixed(1)}%</p>
+                                <p className="text-slate-400 text-base">Error Ratio</p>
+                                <p className="text-3xl font-bold text-slate-100">{(lastAnalysisStats.errorRatio * 100).toFixed(1)}%</p>
                             </div>
                         </div>
                     </div>
                  )}
             </div>
-        </div>
+        </>
     );
 };
 
@@ -513,11 +554,14 @@ const TypingAnalysisSettings: FC<TypingAnalysisSettingsProps> = ({
     onSensitivityChange,
 }) => {
     const sensitivityLabel = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS]?.label || 'Balanced';
+    const sliderPercentage = ((typingSensitivity - 1) / 2) * 100;
 
     return (
-        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+        <div>
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-3xl font-semibold text-slate-100">Fatigue Analysis</h2>
+                 <div className="flex items-center gap-3">
+                    <h3 className="text-2xl font-semibold text-slate-100">Fatigue Analysis</h3>
+                </div>
                 <button
                     onClick={() => onToggle(!isTypingAnalysisOn)}
                     className={`${
@@ -530,14 +574,21 @@ const TypingAnalysisSettings: FC<TypingAnalysisSettingsProps> = ({
                     } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
                 </button>
             </div>
-            <p className="text-slate-400 text-base mb-6">
+            <p className="text-slate-400 text-lg mb-6">
                 Analyzes typing for high speed and error rates to detect potential fatigue.
             </p>
-            <div className={`space-y-4 pt-6 border-t border-slate-700/50 ${!isTypingAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
-                <div>
-                    <label htmlFor="sensitivity" className="block text-base font-medium text-slate-400 mb-2">
-                        Sensitivity: <span className="font-bold text-slate-300">{sensitivityLabel}</span>
-                    </label>
+            <div className={`${!isTypingAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
+                <label htmlFor="sensitivity" className="block text-lg font-medium text-slate-400 mb-2">
+                    Sensitivity
+                </label>
+                <div className="relative pt-6">
+                    <div
+                        className="absolute -top-1 mb-2 bg-violet-600 text-white text-sm font-semibold px-2 py-1 rounded-md transform -translate-x-1/2 transition-all duration-150 ease-out"
+                        style={{ left: `${sliderPercentage}%` }}
+                    >
+                        {sensitivityLabel}
+                        <div className="absolute top-full left-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-violet-600 transform -translate-x-1/2"></div>
+                    </div>
                     <input
                         type="range"
                         id="sensitivity"
@@ -569,13 +620,14 @@ const ScrollAnalysisSettings: FC<ScrollAnalysisSettingsProps> = ({
     onSensitivityChange,
 }) => {
     const sensitivityLabel = SCROLL_SENSITIVITY_LEVELS[scrollSensitivity as keyof typeof SCROLL_SENSITIVITY_LEVELS]?.label || 'Balanced';
+    const sliderPercentage = ((scrollSensitivity - 1) / 2) * 100;
 
     return (
-        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+        <div>
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-3">
                     <ArrowsUpDownIcon className="w-8 h-8 text-slate-400" />
-                    <h2 className="text-3xl font-semibold text-slate-100">Scroll Analysis</h2>
+                    <h3 className="text-2xl font-semibold text-slate-100">Scroll Analysis</h3>
                 </div>
                 <button
                     onClick={() => onToggle(!isScrollAnalysisOn)}
@@ -589,14 +641,21 @@ const ScrollAnalysisSettings: FC<ScrollAnalysisSettingsProps> = ({
                     } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
                 </button>
             </div>
-            <p className="text-slate-400 text-base mb-6">
+            <p className="text-slate-400 text-lg mb-6">
                 Analyzes scroll speed to detect frantic scrolling that can indicate late-night distraction.
             </p>
-            <div className={`space-y-4 pt-6 border-t border-slate-700/50 ${!isScrollAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
-                <div>
-                    <label htmlFor="scroll-sensitivity" className="block text-base font-medium text-slate-400 mb-2">
-                        Sensitivity: <span className="font-bold text-slate-300">{sensitivityLabel}</span>
-                    </label>
+            <div className={`${!isScrollAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
+                <label htmlFor="scroll-sensitivity" className="block text-lg font-medium text-slate-400 mb-2">
+                    Sensitivity
+                </label>
+                <div className="relative pt-6">
+                    <div
+                        className="absolute -top-1 mb-2 bg-violet-600 text-white text-sm font-semibold px-2 py-1 rounded-md transform -translate-x-1/2 transition-all duration-150 ease-out"
+                        style={{ left: `${sliderPercentage}%` }}
+                    >
+                        {sensitivityLabel}
+                        <div className="absolute top-full left-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-violet-600 transform -translate-x-1/2"></div>
+                    </div>
                     <input
                         type="range"
                         id="scroll-sensitivity"
@@ -622,11 +681,11 @@ interface EmotionalGuardSettingsProps {
 
 const EmotionalGuardSettings: FC<EmotionalGuardSettingsProps> = ({ isEmotionalGuardOn, onToggle }) => {
     return (
-        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+        <div>
             <div className="flex justify-between items-center mb-4">
                  <div className="flex items-center gap-3">
                     <BrainIcon className="w-8 h-8 text-slate-400" />
-                    <h2 className="text-3xl font-semibold text-slate-100">Emotional Guard</h2>
+                    <h3 className="text-2xl font-semibold text-slate-100">Emotional Guard</h3>
                 </div>
                 <button
                     onClick={() => onToggle(!isEmotionalGuardOn)}
@@ -640,7 +699,7 @@ const EmotionalGuardSettings: FC<EmotionalGuardSettingsProps> = ({ isEmotionalGu
                     } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
                 </button>
             </div>
-            <p className="text-slate-400 text-base">
+            <p className="text-slate-400 text-lg">
                 Analyzes typing for very high speed with low errors to detect potential agitation and suggest a break.
             </p>
         </div>
@@ -666,6 +725,7 @@ export default function App() {
   const [isEmotionBlocked, setIsEmotionBlocked] = useState(false);
   const [isScrollBlocked, setIsScrollBlocked] = useState(false);
   const [snoozeUntil, setSnoozeUntil] = useState<Date | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   const activityCount = useRef(0);
   const activityTimer = useRef<number | null>(null);
@@ -686,10 +746,14 @@ export default function App() {
       localStorage.setItem('isScrollAnalysisOn', String(isScrollAnalysisOn));
       localStorage.setItem('typingSensitivity', String(typingSensitivity));
       localStorage.setItem('scrollSensitivity', String(scrollSensitivity));
+      if (storageError) {
+        setStorageError(null);
+      }
     } catch (error) {
       console.error('Failed to save to localStorage', error);
+      setStorageError('Your browser settings might be blocking storage, or you might be in private browsing mode. Your settings may not be saved.');
     }
-  }, [sleepTime, wakeTime, blockedApps, isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn, typingSensitivity, scrollSensitivity]);
+  }, [sleepTime, wakeTime, blockedApps, isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn, typingSensitivity, scrollSensitivity, storageError]);
   
   // Clock effect
   useEffect(() => {
@@ -840,7 +904,7 @@ export default function App() {
   }, [handleActivity, handleKeyDown, handleScroll]);
 
   return (
-    <main className="min-h-screen text-slate-200 flex flex-col items-center p-4 sm:p-6 md:p-8">
+    <main className="min-h-screen text-slate-200 flex flex-col items-center p-4 sm:p-6 md:p-8 text-lg">
       <div className="w-full flex flex-col items-center space-y-8 max-w-2xl">
         <Header />
         <Dashboard
@@ -854,33 +918,51 @@ export default function App() {
           isEmotionalGuardOn={isEmotionalGuardOn}
           isScrollAnalysisOn={isScrollAnalysisOn}
         />
-        <TypingSandbox
-            isTypingAnalysisOn={isTypingAnalysisOn}
-            isEmotionalGuardOn={isEmotionalGuardOn}
-            typingSensitivity={typingSensitivity}
-        />
         <Settings
           sleepTime={sleepTime}
           wakeTime={wakeTime}
           onSleepTimeChange={(e) => setSleepTime(e.target.value)}
           onWakeTimeChange={(e) => setWakeTime(e.target.value)}
         />
-        <TypingAnalysisSettings
-            isTypingAnalysisOn={isTypingAnalysisOn}
-            onToggle={setIsTypingAnalysisOn}
-            typingSensitivity={typingSensitivity}
-            onSensitivityChange={(e) => setTypingSensitivity(Number(e.target.value))}
-        />
-        <ScrollAnalysisSettings
-            isScrollAnalysisOn={isScrollAnalysisOn}
-            onToggle={setIsScrollAnalysisOn}
-            scrollSensitivity={scrollSensitivity}
-            onSensitivityChange={(e) => setScrollSensitivity(Number(e.target.value))}
-        />
-        <EmotionalGuardSettings
-            isEmotionalGuardOn={isEmotionalGuardOn}
-            onToggle={setIsEmotionalGuardOn}
-        />
+        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+            <div className="flex items-center gap-3 mb-4">
+                <BeakerIcon className="w-8 h-8 text-slate-400" />
+                <h2 className="text-4xl font-semibold text-slate-100">Analysis Suite & Sandbox</h2>
+            </div>
+            <p className="text-slate-400 text-lg mb-6">
+                Type in the box to see how the analysis works in real-time. Adjust the settings below to see how they impact detection.
+            </p>
+
+            <div className="border-b border-slate-700/50 pb-6 mb-6">
+                 <TypingSandbox
+                    isTypingAnalysisOn={isTypingAnalysisOn}
+                    isEmotionalGuardOn={isEmotionalGuardOn}
+                    typingSensitivity={typingSensitivity}
+                />
+            </div>
+            
+            <div>
+                <h3 className="text-3xl font-semibold text-slate-100 mb-6">Detection Settings</h3>
+                <div className="space-y-8">
+                    <TypingAnalysisSettings
+                        isTypingAnalysisOn={isTypingAnalysisOn}
+                        onToggle={setIsTypingAnalysisOn}
+                        typingSensitivity={typingSensitivity}
+                        onSensitivityChange={(e) => setTypingSensitivity(Number(e.target.value))}
+                    />
+                    <EmotionalGuardSettings
+                        isEmotionalGuardOn={isEmotionalGuardOn}
+                        onToggle={setIsEmotionalGuardOn}
+                    />
+                    <ScrollAnalysisSettings
+                        isScrollAnalysisOn={isScrollAnalysisOn}
+                        onToggle={setIsScrollAnalysisOn}
+                        scrollSensitivity={scrollSensitivity}
+                        onSensitivityChange={(e) => setScrollSensitivity(Number(e.target.value))}
+                    />
+                </div>
+            </div>
+        </div>
         <BlocklistSettings
             blockedApps={blockedApps}
             onAddApp={handleAddApp}
@@ -888,6 +970,7 @@ export default function App() {
         />
       </div>
       <BlockingOverlay blockType={blockType} onSnooze={handleSnooze} />
+      <ErrorBanner message={storageError} onDismiss={() => setStorageError(null)} />
     </main>
   );
 }
