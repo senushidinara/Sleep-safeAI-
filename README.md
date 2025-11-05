@@ -1,24 +1,23 @@
 # Sleep Safe 😴🛡️✨
 
-### Your intelligent guardian against late-night digital habits.
+### Your intelligent digital wellness journal.
 
-> An innovative application that monitors late-night digital activity and analyzes behavioral patterns to encourage healthier sleep habits.
+> An innovative application that analyzes conversational patterns—both typing mechanics and sentiment—to provide insights into your digital well-being and promote healthier habits.
 
-Sleep Safe is a revolutionary guardian for your sleep. 🌙 It goes beyond simple timers by using a **smart, privacy-first, behavior-based approach** to gently remind you when it's time to rest, all wrapped in a polished, intuitive interface.
+Sleep Safe is your personal guardian for digital wellness. 🌙 It uses a **smart, privacy-first, behavior-based approach** to help you understand your state of mind during digital interactions, all wrapped in a beautiful, customizable, and intuitive interface.
 
 ---
 
 ## ✨ Key Features
 
-*   **🎨 Polished & Readable UI:** A clean, modern design with a spacious layout makes the app easy and pleasant to use.
-*   **⏰ Customizable Sleep Schedule:** Easily set your desired bedtime and wake-up time to define your protected sleep window.
-*   **🚫 Smart App Blocklist:** Create a personalized list of distracting websites (e.g., YouTube, Twitter, Reddit). The app intervenes if you're active on these sites during your sleep hours.
-*   **🧠 Revolutionary Behavioral Analysis Suite:** The core innovation of Sleep Safe.
-    *   **Fatigue Analysis:** Analyzes *how* you type—not *what* you type—to detect patterns of fatigue.
-    *   **Emotional Guard:** Detects agitated typing patterns and suggests taking a calming break.
-    *   **Scroll Analysis:** Identifies frantic, unfocused scrolling to curb mindless browsing.
-*   **🔬 Interactive Analysis Sandbox:** See the magic in action! A dedicated sandbox lets you type and get immediate, real-time visual feedback on your typing patterns, making the entire process transparent and fun.
-*   **💤 Snooze Functionality:** If you need a few more minutes, a simple snooze button lets you temporarily pause the overlay.
+*   **🎨 Dynamic Theming:** Your space, your style. Choose from multiple warm and inviting themes like "Sunset," "Ocean," or "Twilight" to personalize your experience.
+*   **🧠 Dual-Layer Psychological Analysis:** The core of the app. It goes beyond simple metrics.
+    *   **Typing Pattern Analysis:** Analyzes *how* you type—not *what* you type—to detect patterns of fatigue (high correction rate) or emotional agitation (rapid, error-free typing).
+    *   **Sentiment Analysis (New!):** Powered by the Gemini API, it analyzes the emotional tone of your messages, identifying them as Positive, Negative, or Neutral.
+*   **📊 Instant, Combined Insights:** After every message, receive a comprehensive analysis card showing your typing pattern and sentiment, giving you a holistic snapshot of your mindset in that moment.
+*   **📓 Persistent Session Journal (New!):** Your analysis history is now automatically saved to a journal. Track your patterns over time, reflect on your conversations, and gain a deeper understanding of your digital habits.
+*   **💬 AI-Powered Conversation:** Engage in a thoughtful conversation with a sleep and wellness-focused AI that helps guide the session and provides a context for the analysis.
+*   **🔒 Completely Private:** All analysis happens in your browser. Your conversations and typing data are never stored on a server or sent anywhere, ensuring your complete privacy.
 
 ---
 
@@ -26,29 +25,29 @@ Sleep Safe is a revolutionary guardian for your sleep. 🌙 It goes beyond simpl
 
 A glimpse into the clean, intuitive, and powerful interface of Sleep Safe.
 
-### ✨ The Dashboard
+### ✨ The Interactive Analysis Session
 
-Your mission control for a good night's sleep. At a glance, see the current time, your sleep schedule, and the status of the behavioral analysis engine.
+Your mission control for digital wellness. Engage with the AI, and see instant psychological feedback after every message you send.
 
-![Sleep Safe Dashboard showing the current time, sleep schedule, and active monitoring status.](./assets/screenshot-dashboard.png)
+*(Screenshot description: The main view of the app showing the chat interface next to the analysis settings. The UI has a warm, sunset-themed color palette.)*
 
-### 🔬 The Analysis Sandbox
+### 🔬 The Insight Card
 
-See the magic happen in real-time! The sandbox provides instant visual feedback on your typing patterns, making the complex analysis transparent and easy to understand.
+See the magic happen in real-time! After each message, a card appears showing the dual-layer analysis: your typing pattern (e.g., "Fatigue") and the message's sentiment (e.g., "Negative").
 
-![The Analysis Sandbox in action, with progress bars for Typing Intensity and Signs of Exhaustion filling up as the user types.](./assets/screenshot-sandbox.png)
+*(Screenshot description: A close-up of the analysis card, displaying "Typing Pattern: Fatigue" and "Sentiment: Neutral" with confidence bars.)*
 
-### ⚙️ Powerful & Simple Settings
+### 🎨 Personalize Your Experience
 
-Tailor Sleep Safe to your needs. Adjust your sleep schedule, manage your app blocklist, and fine-tune the sensitivity of the behavioral analysis with simple, clear controls.
+Tailor Sleep Safe to your mood with the new theme switcher. Fine-tune the sensitivity of the behavioral analysis with simple, clear controls.
 
-![Sleep Safe settings page, showing toggles for Fatigue Analysis, Scroll Analysis, and the App Blocklist.](./assets/screenshot-settings.png)
+*(Screenshot description: The settings area, showing toggles for Fatigue Analysis and Emotional Typing, along with the sensitivity slider and the new theme selection buttons.)*
 
-### 🛌 The Gentle Nudge
+### 📓 Your Session Journal
 
-When late-night activity is detected, Sleep Safe displays a calm, non-intrusive overlay, gently reminding you that it's time to rest.
+Track your progress and reflect on your mindset over time. The journal provides a log of all analyses from your session, creating a valuable record of your digital well-being journey.
 
-![The Sleep Safe blocking overlay with a moon icon, displaying the message 'You seem tired' and a button to snooze for 5 minutes.](./assets/screenshot-overlay.png)
+*(Screenshot description: The "Session Journal" section, displaying a list of past analysis entries, each with a timestamp, typing pattern, and sentiment.)*
 
 ---
 
@@ -56,12 +55,12 @@ When late-night activity is detected, Sleep Safe displays a calm, non-intrusive 
 
 ### 🏗️ High-Level Architecture
 
-Sleep Safe operates through a cohesive system of event listeners, a central logic core, and a reactive UI. This diagram illustrates how user actions are captured, analyzed, and acted upon.
+Sleep Safe operates through a cohesive system of a conversational UI, a dual-layer analysis engine, and a reactive interface that includes persistent state.
 
 ```
                                   ┌───────────────────────────┐
                                   │   Sleep Safe UI/UX 🎨     │
-                                  │ (Dashboard, Settings, etc.) │
+                                  │ (Chat, Settings, Journal) │
                                   └─────────────▲─────────────┘
                                                 │ Renders State
                                   ┌─────────────┴─────────────┐
@@ -73,88 +72,83 @@ Sleep Safe operates through a cohesive system of event listeners, a central logi
                  │                              │                              │
                  ▼                              ▼                              ▼
 ┌───────────────────────────┐   ┌───────────────────────────┐   ┌───────────────────────────┐
-│ Global Event Listeners 📡 │   │  Behavioral Analysis 🧠   │   │   Browser Storage 💾    │
-│  (scroll, keydown)        │──▶│   (Statistical Engine)    │   │   (localStorage)        │
+│  Real-time Event Capture  │   │  Psychological Analysis 🧠  │   │   Browser Storage 💾    │
+│  (Typing within chat)     │──▶│  (Typing + Sentiment)     │──▶│ (localStorage for state)│
 └───────────────────────────┘   └─────────────┬─────────────┘   └───────────────────────────┘
-                                              │ Triggers Block
+                                              │
                                               ▼
                                   ┌───────────────────────────┐
-                                  │  Blocking Overlay UI 🛌   │
-                                  │  (Snooze functionality)   │
+                                  │  Insight Card & Journal   │
+                                  │  (Displays results)       │
                                   └───────────────────────────┘
 ```
 
 <details>
-<summary><strong>🧠 The Behavioral Analysis Suite (Click to Expand)</strong></summary>
+<summary><strong>🧠 The Psychological Analysis Suite (Click to Expand)</strong></summary>
 
-This is the feature that makes Sleep Safe truly intelligent. It identifies signs of tired, agitated, or unfocused digital activity to protect your sleep.
+This is the feature that makes the app truly intelligent. It provides a multi-faceted view of your digital interactions.
 
 ### **🔒 Privacy is Paramount**
 
-**Sleep Safe does NOT record your activity.** It has no "keylogger" functionality and doesn't track your browsing history. The analysis is purely statistical, happens **entirely within your browser**, and is immediately discarded after each analysis window. Your data never leaves your device. Period.
+**The app does NOT record what you type for any purpose other than immediate, in-browser analysis.** The `Sentiment Analysis` sends only the current message's text to the Gemini API for processing and the result is immediately returned—the text is not stored by Google. The typing analysis is purely statistical, happens **entirely within your browser**, and is immediately discarded after each message.
 
 ### **🤔 Identifying Human Patterns**
 
 *   **😴 Fatigue Typing:** When we're tired, our typing often becomes frantic and error-prone. We type quickly but make more mistakes, leading to a high rate of corrections (`Backspace`).
-*   **😠 Agitated Typing:** When we're frustrated, we tend to type very quickly but with unusual precision and fewer errors.
-*   **😵 Distracted Scrolling:** When we're aimlessly browsing, we often scroll very quickly and erratically without stopping to engage with content.
+*   **😠 Agitated Typing:** When we're frustrated or agitated, we tend to type very quickly but with unusual precision and fewer errors.
+*   **😊 Sentiment & Tone:** The words we choose convey powerful emotional information. The app leverages a powerful language model to understand this underlying tone.
 
-Sleep Safe is tuned to spot all of these subtle, human patterns.
+### **🔢 Analysis Flow Breakdown (Per Message)**
 
-### **🔢 Analysis Flow Breakdown (Typing)**
-
-The process is made completely transparent in the **Analysis Sandbox**. Here's a diagram of what happens when you type anywhere while the feature is active during sleep hours:
+The process is triggered every time you send a message in the interactive session:
 
 ```
-[ User Action: Typing... ⌨️ ]
+[ User Action: Clicks "Send" 💬 ]
             │
             ▼
 ┌──────────────────────────┐
-│ Start 4s Analysis Window │
+│ 1. Local Typing Analysis │
+│  (Count Keys/Backspaces  │
+│    from the last input)  │
 └───────────┬────────────┘
             │
             ▼
 ┌──────────────────────────┐
-│  Count Keys & Backspaces │
-│   (In-Memory Stats) 📊   │
+│ 2. API Sentiment Analysis│
+│  (Sends message text to  │
+│    Gemini for analysis)  │
 └───────────┬────────────┘
             │
             ▼
 ┌──────────────────────────┐
-│      Window Ends ⏱️      │
-└───────────┬────────────┘
-            │
-            ▼
-┌──────────────────────────┐
-│ Compare vs. Thresholds   │
-│ (Fatigue/Emotion Logic)  │
+│    Combine Results       │
+│  (Typing Pattern +       │
+│     Sentiment)           │
 └───────────┬────────────┘
             │
             ▼
       ┌───────────┐
-      │  Match?   ├─ (No) ─▶ Reset & Wait
+      │ Display & │
+      │   Log     ├─▶ Show Insight Card
       └─────┬─────┘
-            │ (Yes)
+            │
             ▼
 ┌──────────────────────────┐
-│   Show Blocking Screen   │
-│ ("You seem tired." etc.) │
+│   Add to Session Journal │
+│   (Save in localStorage) │
 └──────────────────────────┘
 
 ```
 
-1.  **Listening for Activity:** The moment you press a key, the app starts a 4-second analysis timer. You'll see an "Analyzing..." indicator in the sandbox.
+1.  **Capturing Typing Data:** As you type your message, the app keeps a simple, in-memory count of total keystrokes and corrections for that message only.
 
-2.  **Analyzing in 4-Second Windows:** For the next 4 seconds, the app keeps a simple, in-memory count of:
-    *   **Total Keystrokes:** Every key you press.
-    *   **Corrections:** Every time you press `Backspace`.
-    *   **Real-time Feedback:** The sandbox provides a detailed, live breakdown:
-        *   **Live Counts:** Prominently displays your `Keys Pressed` and `Backspaces`.
-        *   **Visual Progress Bars:** The "Typing Intensity" and "Signs of Exhaustion" bars fill up instantly with every keypress, showing your progress towards the detection thresholds.
+2.  **Triggering Analysis on Send:** When you hit "Send," two processes fire simultaneously:
+    *   The **local typing analysis** compares your keystroke and correction data against the sensitivity thresholds you've set to determine a "Typing Pattern" (Fatigue, Emotion, or Stable).
+    *   The **sentiment analysis** sends the text of your message to the Gemini API, which returns a sentiment classification (Positive, Negative, or Neutral).
 
-3.  **Measuring Against Thresholds:** After 4 seconds, the app checks your activity against the **Sensitivity** level you've set ("Relaxed", "Balanced", or "Strict"). It asks: does this pattern match fatigue or agitation?
+3.  **Displaying Combined Insight:** The results are combined into a single, easy-to-read "Insight Card" that shows you the analysis for the message you just sent.
 
-4.  **Triggering the Gentle Nudge:** If a pattern is detected, the app displays a relevant overlay, like "You seem tired" or "Take a deep breath," encouraging you to rest.
+4.  **Logging to the Journal:** This combined analysis object is then added to your Session Journal, which is saved in your browser's `localStorage` so you can review it anytime during your session.
 
-The counters then reset, and the app waits for the next burst of typing. This entire process is visualized for you, making a complex feature simple and understandable.
+The counters then reset, and the app waits for your next message. This makes a complex, dual-layer analysis feel simple, transparent, and instantaneous.
 </details>

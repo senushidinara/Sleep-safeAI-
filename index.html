@@ -11,12 +11,63 @@
   "imports": {
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0"
   }
 }
 </script>
+<style>
+  :root {
+    --bg-primary: #FDF2F8; /* A very light, warm pink */
+    --bg-secondary: #FFFFFF;
+    --text-primary: #373041; /* Dark, warm purple */
+    --text-secondary: #6B7280;
+    --accent-primary: #C026D3; /* Magenta */
+    --accent-primary-hover: #A21CAF;
+    --border-color: #F3E8FF;
+    --shadow-color: rgba(192, 132, 252, 0.1);
+  }
+
+  .theme-sunset {
+    --bg-primary: #FFF7ED; /* Warm orange cream */
+    --bg-secondary: #FFFFFF;
+    --text-primary: #4C1D95; /* Deep purple */
+    --text-secondary: #6D28D9;
+    --accent-primary: #F97316; /* Vibrant orange */
+    --accent-primary-hover: #EA580C;
+    --border-color: #FAE8FF;
+    --shadow-color: rgba(249, 115, 22, 0.1);
+  }
+  
+  .theme-ocean {
+    --bg-primary: #F0F9FF; /* Very light cool blue */
+    --bg-secondary: #FFFFFF;
+    --text-primary: #1E3A8A; /* Deep blue */
+    --text-secondary: #3B82F6;
+    --accent-primary: #0EA5E9; /* Sky blue */
+    --accent-primary-hover: #0284C7;
+    --border-color: #E0F2FE;
+    --shadow-color: rgba(14, 165, 233, 0.1);
+  }
+
+  .theme-twilight {
+    --bg-primary: #111827; /* Dark gray-blue */
+    --bg-secondary: #1F2937;
+    --text-primary: #F9FAFB; /* Off-white */
+    --text-secondary: #9CA3AF;
+    --accent-primary: #8B5CF6; /* Lighter purple */
+    --accent-primary-hover: #7C3AED;
+    --border-color: #374151;
+    --shadow-color: rgba(139, 92, 246, 0.1);
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+  }
+</style>
 </head>
-  <body class="bg-slate-900">
+  <body class="theme-sunset">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

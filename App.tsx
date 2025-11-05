@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, FC } from 'react';
+import { GoogleGenAI, Chat } from '@google/genai';
 
 // --- CONSTANTS ---
-const ACTIVITY_THRESHOLD = 25;
-const ACTIVITY_RESET_TIMEOUT = 3000; // 3 seconds
-const SNOOZE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
-const TYPING_ANALYSIS_WINDOW = 4000; // 4 seconds
-const SCROLL_ANALYSIS_WINDOW = 2000; // 2 seconds
 const EMOTIONAL_KEY_THRESHOLD = 40; // High speed typing
 const EMOTIONAL_ERROR_RATIO_MAX = 0.05; // Low error rate (5%)
 
@@ -17,11 +13,7 @@ const SENSITIVITY_LEVELS = {
     3: { keys: 15, errorRatio: 0.1, label: 'Strict' },     // More sensitive to signs of fatigue
 };
 
-const SCROLL_SENSITIVITY_LEVELS = {
-    1: { distance: 4000, label: 'Relaxed' },    // Requires very fast scrolling
-    2: { distance: 3000, label: 'Balanced' },  // Default, balanced detection
-    3: { distance: 2000, label: 'Strict' },     // More sensitive to scrolling
-};
+const SENSITIVITY_LABELS = { 1: 'Relaxed', 2: 'Balanced', 3: 'Strict' };
 
 
 // --- HELPER FUNCTIONS ---
@@ -54,12 +46,6 @@ const XCircleIcon: FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const ShieldCheckIcon: FC<{ className?: string }> = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path fillRule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3A5.25 5.25 0 0012 1.5zM9 6.75A2.25 2.25 0 0111.25 4.5h1.5A2.25 2.25 0 0115 6.75v3H9v-3zM10.09 15.16L8.22 13.29a.75.75 0 00-1.06 1.06l2.5 2.5a.75.75 0 001.06 0l5-5a.75.75 0 10-1.06-1.06l-4.47 4.47z" clipRule="evenodd" />
-  </svg>
-);
-
 const BrainIcon: FC<{ className?: string }> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
         <path d="M14.25 6.375a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 3.75a.75.75 0 100-1.5.75.75 0 000 1.5zM15.75 3.75a.75.75 0 100-1.5.75.75 0 000 1.5zM17.25 6.375a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM15.75 9a.75.75 0 100-1.5.75.75 0 000 1.5zM15 15.75a.75.75 0 11.75-.75.75.75 0 01-.75.75zM12 11.25a.75.75 0 10-1.5 0 .75.75 0 001.5 0zM11.25 13.5a.75.75 0 110 1.5.75.75 0 010-1.5zM9.75 15.75a.75.75 0 10.75.75.75.75 0 00-.75-.75zM9 9a.75.75 0 11.75-.75.75.75 0 01-.75.75zM6.75 6.375a.75.75 0 10-1.5 0 .75.75 0 001.5 0zM8.25 3.75a.75.75 0 110 1.5.75.75 0 010-1.5zM9.75 2.25a.75.75 0 10-1.5 0 .75.75 0 001.5 0zM12 2.25a.75.75 0 10-1.5 0 .75.75 0 001.5 0z" />
@@ -74,74 +60,30 @@ const BeakerIcon: FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const ArrowsUpDownIcon: FC<{ className?: string }> = ({ className }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
-    <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 011.06 0l3.75 3.75a.75.75 0 01-1.06 1.06L12 4.06l-3.22 3.22a.75.75 0 01-1.06-1.06l3.75-3.75zm-3.75 14.25a.75.75 0 011.06 0L12 19.94l3.22-3.22a.75.75 0 111.06 1.06l-3.75 3.75a.75.75 0 01-1.06 0l-3.75-3.75a.75.75 0 010-1.06z" clipRule="evenodd" />
-  </svg>
-);
-
 const ExclamationTriangleIcon: FC<{ className?: string }> = ({ className }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
     <path fillRule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z" clipRule="evenodd" />
   </svg>
 );
 
+const PaletteIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M12 2.25a.75.75 0 01.75.75v1.875a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75z" />
+        <path fillRule="evenodd" d="M8.266 3.122A.75.75 0 019.25 3.878l1.04 1.04a.75.75 0 01-1.06 1.06L8.19 4.938a.75.75 0 01.076-1.06l-.002-.002zm6.528 1.04l1.04-1.04a.75.75 0 111.06 1.06l-1.04 1.04a.75.75 0 11-1.06-1.06z" clipRule="evenodd" />
+        <path d="M10.5 12a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" />
+        <path d="M5.25 12a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM15.75 12a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" />
+        <path fillRule="evenodd" d="M12 21a9 9 0 006.144-15.862C16.892 4.14 15.014 3.75 13.5 3.75c-1.232 0-2.395.27-3.413.738a.75.75 0 01-.84-1.161C10.42 2.13 11.678 1.5 13.5 1.5c2.09 0 4.25.6 5.922 1.932A9.001 9.001 0 0112 21z" clipRule="evenodd" />
+    </svg>
+);
+
 
 // --- UI COMPONENTS ---
 
-type BlockType = 'none' | 'activity' | 'fatigue' | 'emotion' | 'scroll';
-
-interface BlockingOverlayProps {
-  onSnooze: () => void;
-  blockType: BlockType;
-}
-
-const BlockingOverlay: FC<BlockingOverlayProps> = ({ onSnooze, blockType }) => {
-  if (blockType === 'none') return null;
-
-  const messages = {
-    activity: {
-      title: "It's time to rest.",
-      body: "You've been active late at night on a blocked app. Good sleep is important for your health and well-being."
-    },
-    fatigue: {
-      title: "You seem tired.",
-      body: "Your typing patterns suggest it might be time to rest. Protecting your sleep helps you recharge for tomorrow."
-    },
-    emotion: {
-      title: "Take a deep breath.",
-      body: "Your typing suggests you might be feeling agitated. Stepping away for a moment can help. A calm mind leads to better sleep."
-    },
-    scroll: {
-      title: "Fast scrolling detected.",
-      body: "Scrolling quickly can be a sign of distraction. Take a moment to rest your eyes and mind."
-    }
-  };
-  
-  const { title, body } = messages[blockType];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-slate-800 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center border border-slate-700 transform transition-all animate-scale-in">
-        <MoonIcon className="w-16 h-16 text-violet-400 mx-auto mb-6" />
-        <h2 className="text-5xl font-bold text-slate-100 mb-3">{title}</h2>
-        <p className="text-slate-400 mb-8 text-xl">{body}</p>
-        <button
-          onClick={onSnooze}
-          className="w-full bg-violet-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition-colors duration-200 text-xl"
-        >
-          Snooze for 5 minutes
-        </button>
-      </div>
-      <style>{`
-        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
-        @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
-      `}</style>
+const Card: FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => (
+    <div className={`w-full bg-[--bg-secondary] p-8 rounded-2xl shadow-lg ${className}`} style={{boxShadow: '0 10px 25px -5px var(--shadow-color)'}}>
+        {children}
     </div>
-  );
-};
+);
 
 interface ErrorBannerProps {
     message: string | null;
@@ -152,7 +94,7 @@ const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss }) => {
   if (!message) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full bg-red-600 text-white p-4 rounded-lg shadow-lg flex items-start animate-fade-in" role="alert">
+    <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full bg-red-500 text-white p-4 rounded-lg shadow-lg flex items-start animate-fade-in" role="alert">
       <div className="flex-shrink-0">
         <ExclamationTriangleIcon className="w-6 h-6" />
       </div>
@@ -162,7 +104,7 @@ const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss }) => {
       </div>
       <button 
         onClick={onDismiss} 
-        className="ml-auto -mr-1 -mt-1 p-1 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-white"
+        className="ml-auto -mr-1 -mt-1 p-1 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-white"
         aria-label="Dismiss"
       >
         <XCircleIcon className="w-5 h-5" />
@@ -171,204 +113,93 @@ const ErrorBanner: FC<ErrorBannerProps> = ({ message, onDismiss }) => {
   );
 };
 
-const Header: FC = () => (
-  <header className="text-center p-6">
+const Header: FC<{theme: string, setTheme: (theme: string) => void}> = ({theme, setTheme}) => (
+  <header className="w-full max-w-5xl text-center p-6 relative">
     <div className="flex items-center justify-center gap-4">
-      <MoonIcon className="w-10 h-10 text-violet-400" />
-      <h1 className="text-6xl font-bold text-slate-100 tracking-tight">Sleep Safe</h1>
+      <MoonIcon className="w-10 h-10 text-[--accent-primary]" />
+      <h1 className="text-6xl font-bold text-[--text-primary] tracking-tight">Sleep Safe</h1>
     </div>
-    <p className="text-slate-400 mt-4 text-xl max-w-prose">Block addictive apps and protect your sleep from late-night digital habits.</p>
+    <p className="text-[--text-secondary] mt-4 text-xl max-w-prose mx-auto">An interactive wellness journal to analyze typing patterns and promote healthier digital habits.</p>
+    <ThemeSwitcher currentTheme={theme} onChangeTheme={setTheme} />
   </header>
 );
 
-interface DashboardProps {
-  currentTime: Date;
-  sleepTime: string;
-  wakeTime: string;
-  isSleepTime: boolean;
-  isSnoozed: boolean;
-  blockedAppsCount: number;
-  isTypingAnalysisOn: boolean;
-  isEmotionalGuardOn: boolean;
-  isScrollAnalysisOn: boolean;
-}
-
-const Dashboard: FC<DashboardProps> = ({ currentTime, sleepTime, wakeTime, isSleepTime, isSnoozed, blockedAppsCount, isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn }) => {
-  const status = isSnoozed ? { text: "Snoozed", color: "bg-yellow-400" } :
-                 isSleepTime ? { text: "Sleep Time Active", color: "bg-green-400" } :
-                 { text: "Monitoring", color: "bg-blue-400" };
-
-  const analysisStatus = useMemo(() => {
-    const onCount = [isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn].filter(Boolean).length;
-    if (onCount === 3) {
-      return { text: "On", color: "text-green-400" };
-    }
-    if (onCount > 0) {
-      return { text: "Partial", color: "text-yellow-400" };
-    }
-    return { text: "Off", color: "text-slate-500" };
-  }, [isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn]);
-
-  return (
-    <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-4xl font-semibold text-slate-100">Status</h2>
-        <div className="flex items-center gap-2">
-          <div className={`w-3 h-3 rounded-full ${status.color} animate-pulse`}></div>
-          <span className="text-slate-300 font-medium text-xl">{status.text}</span>
-        </div>
-      </div>
-      <div className="text-center mb-6">
-        <p className="text-8xl font-mono font-bold text-slate-50 tracking-wider">
-          {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </p>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-        <div className="flex flex-col items-center">
-          <p className="text-slate-400">Bedtime</p>
-          <div className="flex items-center gap-2 mt-1">
-            <MoonIcon className="w-6 h-6 text-slate-500" />
-            <p className="text-3xl font-semibold text-slate-200">{sleepTime}</p>
-          </div>
-        </div>
-        <div className="flex flex-col items-center">
-          <p className="text-slate-400">Wake up</p>
-          <div className="flex items-center gap-2 mt-1">
-            <SunIcon className="w-6 h-6 text-slate-500" />
-            <p className="text-3xl font-semibold text-slate-200">{wakeTime}</p>
-          </div>
-        </div>
-        <div className="flex flex-col items-center">
-          <p className="text-slate-400">Blocked Apps</p>
-          <div className="flex items-center gap-2 mt-1">
-            <ShieldCheckIcon className="w-6 h-6 text-slate-500" />
-            <p className="text-3xl font-semibold text-slate-200">{blockedAppsCount}</p>
-          </div>
-        </div>
-        <div className="flex flex-col items-center">
-          <p className="text-slate-400">Behavioral Analysis</p>
-          <div className="flex items-center gap-2 mt-1">
-            <BrainIcon className="w-6 h-6 text-slate-500" />
-            <p className={`text-3xl font-semibold ${analysisStatus.color}`}>{analysisStatus.text}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-interface SettingsProps {
-  sleepTime: string;
-  wakeTime: string;
-  onSleepTimeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onWakeTimeChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}
-
-const Settings: FC<SettingsProps> = ({ sleepTime, wakeTime, onSleepTimeChange, onWakeTimeChange }) => (
-  <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
-    <h2 className="text-4xl font-semibold text-slate-100 mb-6">Your Schedule</h2>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <div>
-        <label htmlFor="sleepTime" className="block text-lg font-medium text-slate-400 mb-2">Bedtime</label>
-        <input
-          type="time"
-          id="sleepTime"
-          value={sleepTime}
-          onChange={onSleepTimeChange}
-          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-        />
-      </div>
-      <div>
-        <label htmlFor="wakeTime" className="block text-lg font-medium text-slate-400 mb-2">Wake up</label>
-        <input
-          type="time"
-          id="wakeTime"
-          value={wakeTime}
-          onChange={onWakeTimeChange}
-          className="w-full bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-        />
-      </div>
-    </div>
-  </div>
-);
-
-interface BlocklistSettingsProps {
-  blockedApps: string[];
-  onAddApp: (appName: string) => void;
-  onRemoveApp: (appName: string) => void;
-}
-
-const BlocklistSettings: FC<BlocklistSettingsProps> = ({ blockedApps, onAddApp, onRemoveApp }) => {
-    const [newApp, setNewApp] = useState('');
-
-    const handleAdd = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newApp.trim()) {
-            onAddApp(newApp.trim());
-            setNewApp('');
-        }
-    };
+const ThemeSwitcher: FC<{currentTheme: string, onChangeTheme: (theme: string) => void}> = ({ currentTheme, onChangeTheme }) => {
+    const themes = [
+        { name: 'sunset', color: 'bg-orange-500' },
+        { name: 'ocean', color: 'bg-sky-500' },
+        { name: 'twilight', color: 'bg-indigo-500' },
+    ];
 
     return (
-        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
-            <h2 className="text-4xl font-semibold text-slate-100 mb-6">App Blocklist</h2>
-            <form onSubmit={handleAdd} className="flex gap-3 mb-4">
-                <input
-                    type="text"
-                    value={newApp}
-                    onChange={(e) => setNewApp(e.target.value)}
-                    placeholder="e.g., 'YouTube', 'Reddit'"
-                    className="flex-grow bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-                    aria-label="Add app to blocklist"
+        <div className="absolute top-6 right-6 flex items-center gap-2 bg-[--bg-secondary] p-2 rounded-full border border-[--border-color] shadow-sm">
+            {themes.map(theme => (
+                <button
+                    key={theme.name}
+                    onClick={() => onChangeTheme(`theme-${theme.name}`)}
+                    className={`w-8 h-8 rounded-full ${theme.color} transition-transform duration-200 ${currentTheme === `theme-${theme.name}` ? 'ring-2 ring-offset-2 ring-[--accent-primary] ring-offset-[--bg-secondary]' : 'hover:scale-110'}`}
+                    aria-label={`Switch to ${theme.name} theme`}
                 />
-                <button type="submit" className="bg-violet-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-violet-700 transition-colors duration-200 text-xl">
-                    Add
-                </button>
-            </form>
-            <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-                {blockedApps.length > 0 ? (
-                    blockedApps.map((app) => (
-                        <div key={app} className="flex items-center justify-between bg-slate-700/50 p-3 rounded-lg animate-fade-in">
-                            <span className="text-slate-300 text-xl break-all">{app}</span>
-                            <button onClick={() => onRemoveApp(app)} className="text-slate-500 hover:text-red-400 ml-3" aria-label={`Remove ${app} from blocklist`}>
-                                <XCircleIcon className="w-7 h-7 flex-shrink-0" />
-                            </button>
-                        </div>
-                    ))
-                ) : (
-                    <p className="text-slate-500 text-center py-4 text-xl">No apps on your blocklist.</p>
-                )}
-            </div>
+            ))}
         </div>
-    );
+    )
 };
 
-interface TypingSandboxProps {
-    typingSensitivity: number;
+
+// --- TYPES ---
+type Message = { author: 'bot' | 'user'; text: string; };
+type Sentiment = 'Positive' | 'Negative' | 'Neutral' | 'Unknown';
+type AnalysisResult = {
+  id: string;
+  timestamp: string;
+  typingPattern: 'fatigue' | 'emotion' | 'stable';
+  typingConfidence: number | null;
+  sentiment: Sentiment;
+  stats: {
+    keys: number;
+    backspaces: number;
+    errorRatio: number;
+  };
+};
+
+interface ChatAnalysisSessionProps {
+    sensitivity: number;
     isTypingAnalysisOn: boolean;
     isEmotionalGuardOn: boolean;
+    onAnalysisComplete: (result: AnalysisResult) => void;
 }
 
-type AnalysisStats = {
-  keys: number;
-  backspaces: number;
-  errorRatio: number;
-  pattern: 'fatigue' | 'emotion' | null;
-  confidence: number | null;
-};
-
-const TypingSandbox: FC<TypingSandboxProps> = ({ typingSensitivity, isTypingAnalysisOn, isEmotionalGuardOn }) => {
-    const [text, setText] = useState('');
+const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ sensitivity, isTypingAnalysisOn, isEmotionalGuardOn, onAnalysisComplete }) => {
+    const [messages, setMessages] = useState<Message[]>([
+        { author: 'bot', text: "Hello! To begin our session, could you tell me a little about how you slept last night?" }
+    ]);
+    const [inputValue, setInputValue] = useState('');
+    const [isBotReplying, setIsBotReplying] = useState(false);
+    const chatRef = useRef<Chat | null>(null);
     const [visualTypingStats, setVisualTypingStats] = useState({ keys: 0, backspaces: 0 });
     const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [lastAnalysisStats, setLastAnalysisStats] = useState<AnalysisStats | null>(null);
+    const [lastTypingAnalysis, setLastTypingAnalysis] = useState<AnalysisResult | null>(null);
     
     const typingStats = useRef({ keys: 0, backspaces: 0 });
-    const typingAnalysisTimer = useRef<number | null>(null);
     const resultTimer = useRef<number | null>(null);
+    const ai = useRef<GoogleGenAI | null>(null);
 
-    const threshold = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS];
+    useEffect(() => {
+        try {
+            ai.current = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+            chatRef.current = ai.current.chats.create({
+                model: 'gemini-2.5-flash',
+                config: {
+                    systemInstruction: 'You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation about their sleep habits. Ask thoughtful, open-ended questions. Based on their responses, provide simple, supportive analysis and gentle suggestions. Maintain a natural, empathetic, and slightly more detailed conversational flow.',
+                },
+            });
+        } catch (error) {
+            console.error("Failed to initialize Gemini AI:", error);
+            setMessages(prev => [...prev, { author: 'bot', text: "Sorry, the chat service is unavailable right now." }]);
+        }
+    }, []);
+
+    const threshold = SENSITIVITY_LEVELS[sensitivity as keyof typeof SENSITIVITY_LEVELS];
 
     const calculateFatigueConfidence = (keys: number, errorRatio: number) => {
         const keyRatio = Math.min(1, Math.max(0, (keys - threshold.keys) / (threshold.keys)));
@@ -382,594 +213,354 @@ const TypingSandbox: FC<TypingSandboxProps> = ({ typingSensitivity, isTypingAnal
         return Math.min(100, Math.max(0, Math.round(((keyRatio * 0.6) + (errorPerfRatio * 0.4)) * 100)));
     };
 
-    const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setText(e.target.value);
-    };
-
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (!isTypingAnalysisOn && !isEmotionalGuardOn) return;
-
-        if (resultTimer.current) clearTimeout(resultTimer.current);
-        setAnalysisResult(null);
-        setIsAnalyzing(true);
-
-        const isBackspace = event.key === 'Backspace';
-
-        typingStats.current.keys += 1;
-        if (isBackspace) {
-            typingStats.current.backspaces += 1;
-        }
-
-        setVisualTypingStats({ ...typingStats.current });
-
-        if (typingAnalysisTimer.current) {
-            clearTimeout(typingAnalysisTimer.current);
-        }
-
-        typingAnalysisTimer.current = window.setTimeout(() => {
-            const { keys, backspaces } = typingStats.current;
-            const errorRatio = keys > 0 ? backspaces / keys : 0;
-            
-            let resultMessage = "Analysis complete. Keep typing to start a new session.";
-            let detectedPattern: 'fatigue' | 'emotion' | null = null;
-            let confidence: number | null = null;
-
-            if (isEmotionalGuardOn && keys >= EMOTIONAL_KEY_THRESHOLD && errorRatio <= EMOTIONAL_ERROR_RATIO_MAX) {
-                resultMessage = "Emotional Pattern Detected: High speed with low errors.";
-                detectedPattern = 'emotion';
-                confidence = calculateEmotionConfidence(keys, errorRatio);
-            } else if (isTypingAnalysisOn && keys >= threshold.keys && errorRatio >= threshold.errorRatio) {
-                resultMessage = "Fatigue Pattern Detected: High intensity with high error rate.";
-                detectedPattern = 'fatigue';
-                confidence = calculateFatigueConfidence(keys, errorRatio);
+    const getSentimentAnalysis = async (text: string): Promise<Sentiment> => {
+        if (!ai.current) return 'Unknown';
+        try {
+            const response = await ai.current.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `Analyze the sentiment of the following text. Respond with only a single word: 'Positive', 'Negative', or 'Neutral'. Text: "${text}"`
+            });
+            const sentiment = response.text.trim();
+            if (['Positive', 'Negative', 'Neutral'].includes(sentiment)) {
+                return sentiment as Sentiment;
             }
-            
-            setAnalysisResult(resultMessage);
-            setLastAnalysisStats({ keys, backspaces, errorRatio, pattern: detectedPattern, confidence });
-
-            typingStats.current = { keys: 0, backspaces: 0 };
-            setVisualTypingStats({ keys: 0, backspaces: 0 });
-            typingAnalysisTimer.current = null;
-            setIsAnalyzing(false);
-            
-            resultTimer.current = window.setTimeout(() => {
-                setAnalysisResult(null);
-                setLastAnalysisStats(null);
-            }, 5000);
-
-        }, TYPING_ANALYSIS_WINDOW);
-    };
-
-    const intensityPercent = Math.min(100, (visualTypingStats.keys / threshold.keys) * 100);
-    const errorRate = visualTypingStats.keys > 0 ? (visualTypingStats.backspaces / visualTypingStats.keys) : 0;
-    const errorPercent = threshold.errorRatio > 0 ? Math.min(100, (errorRate / threshold.errorRatio) * 100) : 0;
-
-    const getBarColor = (percent: number) => {
-        if (percent >= 100) return 'bg-red-500';
-        if (percent >= 75) return 'bg-yellow-500';
-        return 'bg-blue-500';
+            return 'Unknown';
+        } catch (error) {
+            console.error("Sentiment analysis error:", error);
+            return 'Unknown';
+        }
     };
     
-    const intensityBarColor = getBarColor(intensityPercent);
-    const errorBarColor = getBarColor(errorPercent);
+    const runAnalysis = async (userMessage: string) => {
+        const { keys, backspaces } = typingStats.current;
+        const errorRatio = keys > 0 ? backspaces / keys : 0;
+        
+        let detectedPattern: 'fatigue' | 'emotion' | 'stable' = 'stable';
+        let confidence: number | null = null;
+        let resultMessage = "Analysis Complete: Your typing pattern appears stable.";
+
+        if (isEmotionalGuardOn && keys >= EMOTIONAL_KEY_THRESHOLD && errorRatio <= EMOTIONAL_ERROR_RATIO_MAX) {
+            detectedPattern = 'emotion';
+            confidence = calculateEmotionConfidence(keys, errorRatio);
+            resultMessage = "Emotional Pattern Detected: High speed with low errors.";
+        } else if (isTypingAnalysisOn && keys >= threshold.keys && errorRatio >= threshold.errorRatio) {
+            detectedPattern = 'fatigue';
+            confidence = calculateFatigueConfidence(keys, errorRatio);
+            resultMessage = "Fatigue Pattern Detected: High intensity with high correction rate.";
+        }
+        
+        const sentiment = await getSentimentAnalysis(userMessage);
+
+        const finalResult: AnalysisResult = {
+            id: new Date().toISOString(),
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            typingPattern: detectedPattern,
+            typingConfidence: confidence,
+            sentiment,
+            stats: { keys, backspaces, errorRatio },
+        };
+
+        onAnalysisComplete(finalResult);
+        setLastTypingAnalysis(finalResult);
+        setAnalysisResult(resultMessage);
+
+        typingStats.current = { keys: 0, backspaces: 0 };
+        setVisualTypingStats({ keys: 0, backspaces: 0 });
+        
+        if (resultTimer.current) clearTimeout(resultTimer.current);
+        resultTimer.current = window.setTimeout(() => setAnalysisResult(null), 8000);
+    };
+
+
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const userMessage = inputValue.trim();
+        if (userMessage === '' || isBotReplying) return;
+        
+        setMessages(prev => [...prev, { author: 'user', text: userMessage }]);
+        setInputValue('');
+        setIsBotReplying(true);
+
+        await runAnalysis(userMessage);
+
+        try {
+            if (!chatRef.current) throw new Error("Chat session not initialized.");
+            const response = await chatRef.current.sendMessage({ message: userMessage });
+            const botResponse = response.text;
+            setMessages(prev => [...prev, { author: 'bot', text: botResponse }]);
+        } catch (error) {
+            console.error("Gemini API error:", error);
+            setMessages(prev => [...prev, { author: 'bot', text: "Oops, something went wrong. Please try again." }]);
+        } finally {
+            setIsBotReplying(false);
+        }
+    };
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!isTypingAnalysisOn && !isEmotionalGuardOn) return;
+        if (resultTimer.current) clearTimeout(resultTimer.current);
+        setAnalysisResult(null);
+        
+        typingStats.current.keys += 1;
+        if (event.key === 'Backspace') {
+            typingStats.current.backspaces += 1;
+        }
+        setVisualTypingStats({ ...typingStats.current });
+    };
 
     return (
-        <>
-            <textarea
-                id="typing-sandbox"
-                value={text}
-                onChange={handleTextChange}
-                onKeyDown={handleKeyDown}
-                placeholder={(!isTypingAnalysisOn && !isEmotionalGuardOn) ? "Enable an analysis to begin..." : "Start typing here..."}
-                className="w-full h-28 bg-slate-700 border border-slate-600 text-slate-200 rounded-lg p-3 text-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 mb-6 resize-none disabled:opacity-50"
-                aria-label="Typing analysis sandbox"
-                disabled={!isTypingAnalysisOn && !isEmotionalGuardOn}
-            />
-             <div className="grid grid-cols-2 gap-4 text-center mb-6 border-b border-slate-700/50 pb-6">
-                <div>
-                    <p className="text-slate-400 text-base font-medium">Keys Pressed</p>
-                    <p className="text-5xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.keys}</p>
-                </div>
-                <div>
-                    <p className="text-slate-400 text-base font-medium">Backspaces</p>
-                    <p className="text-5xl font-bold text-slate-100 font-mono mt-1">{visualTypingStats.backspaces}</p>
-                </div>
-            </div>
-             <div className="space-y-4">
-                 <div>
-                     <div className="flex justify-between items-center text-lg mb-1">
-                         <div className="flex items-center gap-2">
-                            <span className="text-slate-400">Typing Speed</span>
-                            {isAnalyzing && <span className="text-blue-400 text-base animate-pulse">Analyzing...</span>}
-                         </div>
-                         <span className="text-slate-300 font-mono">{intensityPercent.toFixed(0)}%</span>
-                     </div>
-                     <div className="w-full bg-slate-700 rounded-full h-3">
-                         <div className={`${intensityBarColor} h-3 rounded-full transition-all duration-200`} style={{ width: `${intensityPercent}%` }}></div>
-                     </div>
-                 </div>
-                 <div>
-                     <div className="flex justify-between items-center text-lg mb-1">
-                         <span className="text-slate-400">Correction Rate</span>
-                         <span className="text-slate-300 font-mono">{errorPercent.toFixed(0)}%</span>
-                     </div>
-                     <div className="w-full bg-slate-700 rounded-full h-3">
-                         <div className={`${errorBarColor} h-3 rounded-full transition-all duration-200`} style={{ width: `${errorPercent}%` }}></div>
-                     </div>
-                 </div>
-                 {analysisResult && (
-                    <div className="mt-4 text-left p-4 bg-slate-700/50 rounded-lg animate-fade-in">
-                        <p className="text-violet-300 font-medium text-lg text-center mb-3">{analysisResult}</p>
-                        {lastAnalysisStats?.confidence != null && (
-                            <div className="mt-2">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-slate-400 text-base font-medium">Detection Confidence</span>
-                                    <span className="text-xl font-bold text-white font-mono">{lastAnalysisStats.confidence}%</span>
-                                </div>
-                                <div className="w-full bg-slate-600 rounded-full h-2">
-                                    <div 
-                                        className="bg-green-400 h-2 rounded-full" 
-                                        style={{ width: `${lastAnalysisStats.confidence}%` }}>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+        <div className="bg-[--bg-secondary] p-6 rounded-xl border border-[--border-color] h-full shadow-inner">
+            <div className="h-64 bg-[var(--bg-primary)] p-4 rounded-lg overflow-y-auto mb-4 flex flex-col space-y-4 border border-[--border-color]">
+                {messages.map((msg, index) => (
+                    <div key={index} className={`flex ${msg.author === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`rounded-lg px-4 py-2 max-w-[80%] break-words shadow-sm ${msg.author === 'user' ? 'bg-[var(--accent-primary)] text-white' : 'bg-white text-slate-800'}`}>
+                            {msg.text}
+                        </div>
                     </div>
-                 )}
-                 {lastAnalysisStats && (
-                    <div className="mt-6 pt-4 border-t border-slate-700/50 animate-fade-in">
-                        <h3 className="text-xl font-semibold text-slate-300 mb-3 text-center">Detailed Analysis (Last 4s)</h3>
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                            <div>
-                                <p className="text-slate-400 text-base">Keys Pressed</p>
-                                <p className="text-3xl font-bold text-slate-100">{lastAnalysisStats.keys}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-base">Backspaces</p>
-                                <p className="text-3xl font-bold text-slate-100">{lastAnalysisStats.backspaces}</p>
-                            </div>
-                            <div>
-                                <p className="text-slate-400 text-base">Error Ratio</p>
-                                <p className="text-3xl font-bold text-slate-100">{(lastAnalysisStats.errorRatio * 100).toFixed(1)}%</p>
+                ))}
+                {isBotReplying && (
+                    <div className="flex justify-start">
+                        <div className="rounded-lg px-4 py-2 max-w-[80%] bg-white text-slate-800 shadow-sm">
+                            <div className="flex items-center space-x-1">
+                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-pulse [animation-delay:-0.3s]"></span>
+                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-pulse [animation-delay:-0.15s]"></span>
+                                <span className="w-2 h-2 bg-slate-400 rounded-full animate-pulse"></span>
                             </div>
                         </div>
                     </div>
-                 )}
+                )}
             </div>
-        </>
+            <form onSubmit={handleSendMessage} className="flex gap-3 mb-4">
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={isBotReplying ? "Assistant is typing..." : ((!isTypingAnalysisOn && !isEmotionalGuardOn) ? "Enable an analysis to begin..." : "Type your response...")}
+                    className="flex-grow w-full bg-[var(--bg-primary)] border border-[--border-color] text-[--text-primary] rounded-lg p-3 text-xl focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-[var(--accent-primary)] disabled:opacity-50"
+                    disabled={(!isTypingAnalysisOn && !isEmotionalGuardOn) || isBotReplying}
+                />
+                <button 
+                    type="submit" 
+                    className="bg-[--accent-primary] text-white font-semibold py-3 px-5 rounded-lg hover:bg-[--accent-primary-hover] transition-colors duration-200 text-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={(!isTypingAnalysisOn && !isEmotionalGuardOn) || isBotReplying || !inputValue.trim()}
+                >
+                    Send
+                </button>
+            </form>
+             {lastTypingAnalysis && (
+                <div className="mt-4 text-left p-4 bg-[var(--bg-primary)] rounded-lg animate-fade-in border border-[--border-color]">
+                    <h3 className="text-xl font-semibold text-[--text-primary] mb-3 text-center">Last Message Analysis</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p className="text-base text-[--text-secondary]">Typing Pattern</p>
+                            <p className="text-2xl font-bold text-[--text-primary] capitalize">{lastTypingAnalysis.typingPattern}</p>
+                            {lastTypingAnalysis.typingConfidence != null && (
+                                <div className="w-full bg-slate-200 rounded-full h-2 mt-1">
+                                    <div className="bg-green-400 h-2 rounded-full" style={{ width: `${lastTypingAnalysis.typingConfidence}%` }}></div>
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                           <p className="text-base text-[--text-secondary]">Sentiment</p>
+                           <p className="text-2xl font-bold text-[--text-primary]">{lastTypingAnalysis.sentiment}</p>
+                        </div>
+                    </div>
+                </div>
+             )}
+        </div>
     );
 };
 
-interface TypingAnalysisSettingsProps {
-    isTypingAnalysisOn: boolean;
-    onToggle: (enabled: boolean) => void;
-    typingSensitivity: number;
-    onSensitivityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+interface AnalysisHistoryProps {
+    history: AnalysisResult[];
 }
+const AnalysisHistory: FC<AnalysisHistoryProps> = ({ history }) => {
+    return (
+        <Card className="max-w-5xl">
+            <div className="flex items-center gap-3 mb-4">
+                <BeakerIcon className="w-8 h-8 text-[--text-secondary]" />
+                <h2 className="text-4xl font-semibold text-[--text-primary]">Session Journal</h2>
+            </div>
+            <p className="text-[--text-secondary] text-lg mb-6 max-w-3xl">
+                Review the analysis from your current session. This log is cleared when you close the tab.
+            </p>
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                {history.length > 0 ? (
+                    history.slice().reverse().map(item => (
+                        <div key={item.id} className="p-4 rounded-lg bg-[--bg-primary] border border-[--border-color]">
+                            <div className="flex justify-between items-center text-sm text-[--text-secondary] mb-2">
+                                <span>{item.timestamp}</span>
+                                <span>Keys: {item.stats.keys} | Errors: {(item.stats.errorRatio * 100).toFixed(1)}%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="font-semibold text-lg text-[--text-primary] capitalize">Typing: {item.typingPattern}</span>
+                                <span className="font-semibold text-lg text-[--text-primary]">Sentiment: {item.sentiment}</span>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-center text-[--text-secondary] py-8">Your analysis history will appear here once you send a message.</p>
+                )}
+            </div>
+        </Card>
+    );
+};
 
-const TypingAnalysisSettings: FC<TypingAnalysisSettingsProps> = ({ 
-    isTypingAnalysisOn, 
-    onToggle, 
-    typingSensitivity, 
-    onSensitivityChange,
-}) => {
-    const sensitivityLabel = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS]?.label || 'Balanced';
-    const sliderPercentage = ((typingSensitivity - 1) / 2) * 100;
+
+// --- SETTINGS COMPONENTS ---
+
+interface AnalysisSettingsProps {
+  isTypingAnalysisOn: boolean;
+  onTypingToggle: (enabled: boolean) => void;
+  isEmotionalGuardOn: boolean;
+  onEmotionalToggle: (enabled: boolean) => void;
+  sensitivity: number;
+  onSensitivityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+const AnalysisSettings: FC<AnalysisSettingsProps> = ({ isTypingAnalysisOn, onTypingToggle, isEmotionalGuardOn, onEmotionalToggle, sensitivity, onSensitivityChange }) => {
+    const sensitivityLabel = SENSITIVITY_LABELS[sensitivity as keyof typeof SENSITIVITY_LABELS] || 'Balanced';
+    const sliderPercentage = ((sensitivity - 1) / 2) * 100;
+    const isDisabled = !isTypingAnalysisOn && !isEmotionalGuardOn;
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                 <div className="flex items-center gap-3">
-                    <h3 className="text-2xl font-semibold text-slate-100">Fatigue Analysis</h3>
-                </div>
-                <button
-                    onClick={() => onToggle(!isTypingAnalysisOn)}
-                    className={`${
-                        isTypingAnalysisOn ? 'bg-violet-600' : 'bg-slate-700'
-                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
-                    aria-pressed={isTypingAnalysisOn}
-                >
-                    <span className={`${
-                        isTypingAnalysisOn ? 'translate-x-6' : 'translate-x-1'
-                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
-                </button>
-            </div>
-            <p className="text-slate-400 text-lg mb-6">
-                Analyzes typing for high speed and error rates to detect potential fatigue.
-            </p>
-            <div className={`${!isTypingAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
-                <label htmlFor="sensitivity" className="block text-lg font-medium text-slate-400 mb-2">
-                    Sensitivity
-                </label>
-                <div className="relative pt-6">
+         <div className="space-y-8">
+            <div className={`border-b border-[--border-color] pb-8 ${isDisabled ? 'opacity-50' : ''} transition-opacity`}>
+                <h3 className="text-2xl font-semibold text-[--text-primary] mb-4">Analysis Sensitivity</h3>
+                <p className="text-[--text-secondary] text-lg mb-6">
+                    Adjust how sensitive the typing analysis is. 'Strict' detects patterns more easily.
+                </p>
+                 <div className="relative pt-6">
                     <div
-                        className="absolute -top-1 mb-2 bg-violet-600 text-white text-sm font-semibold px-2 py-1 rounded-md transform -translate-x-1/2 transition-all duration-150 ease-out"
+                        className="absolute -top-1 mb-2 bg-[--accent-primary] text-white text-sm font-semibold px-2 py-1 rounded-md transform -translate-x-1/2 transition-all duration-150 ease-out"
                         style={{ left: `${sliderPercentage}%` }}
                     >
                         {sensitivityLabel}
-                        <div className="absolute top-full left-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-violet-600 transform -translate-x-1/2"></div>
+                        <div className="absolute top-full left-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-[--accent-primary] transform -translate-x-1/2"></div>
                     </div>
                     <input
                         type="range"
-                        id="sensitivity"
-                        min="1"
-                        max="3"
-                        step="1"
-                        value={typingSensitivity}
+                        min="1" max="3" step="1"
+                        value={sensitivity}
                         onChange={onSensitivityChange}
-                        disabled={!isTypingAnalysisOn}
-                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-violet-500 disabled:accent-slate-600"
+                        disabled={isDisabled}
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[--accent-primary] disabled:accent-slate-400"
                     />
                 </div>
             </div>
-        </div>
-    );
-};
-
-interface ScrollAnalysisSettingsProps {
-    isScrollAnalysisOn: boolean;
-    onToggle: (enabled: boolean) => void;
-    scrollSensitivity: number;
-    onSensitivityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-}
-
-const ScrollAnalysisSettings: FC<ScrollAnalysisSettingsProps> = ({ 
-    isScrollAnalysisOn, 
-    onToggle, 
-    scrollSensitivity, 
-    onSensitivityChange,
-}) => {
-    const sensitivityLabel = SCROLL_SENSITIVITY_LEVELS[scrollSensitivity as keyof typeof SCROLL_SENSITIVITY_LEVELS]?.label || 'Balanced';
-    const sliderPercentage = ((scrollSensitivity - 1) / 2) * 100;
-
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                    <ArrowsUpDownIcon className="w-8 h-8 text-slate-400" />
-                    <h3 className="text-2xl font-semibold text-slate-100">Scroll Analysis</h3>
-                </div>
-                <button
-                    onClick={() => onToggle(!isScrollAnalysisOn)}
-                    className={`${
-                        isScrollAnalysisOn ? 'bg-violet-600' : 'bg-slate-700'
-                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
-                    aria-pressed={isScrollAnalysisOn}
-                >
-                    <span className={`${
-                        isScrollAnalysisOn ? 'translate-x-6' : 'translate-x-1'
-                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
-                </button>
-            </div>
-            <p className="text-slate-400 text-lg mb-6">
-                Analyzes scroll speed to detect frantic scrolling that can indicate late-night distraction.
-            </p>
-            <div className={`${!isScrollAnalysisOn ? 'opacity-50 transition-opacity' : 'transition-opacity'}`}>
-                <label htmlFor="scroll-sensitivity" className="block text-lg font-medium text-slate-400 mb-2">
-                    Sensitivity
-                </label>
-                <div className="relative pt-6">
-                    <div
-                        className="absolute -top-1 mb-2 bg-violet-600 text-white text-sm font-semibold px-2 py-1 rounded-md transform -translate-x-1/2 transition-all duration-150 ease-out"
-                        style={{ left: `${sliderPercentage}%` }}
+            
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                     <div className="flex items-center gap-3">
+                        <BeakerIcon className="w-8 h-8 text-[--text-secondary]" />
+                        <h3 className="text-2xl font-semibold text-[--text-primary]">Typing Fatigue</h3>
+                    </div>
+                    <button
+                        onClick={() => onTypingToggle(!isTypingAnalysisOn)}
+                        className={`${isTypingAnalysisOn ? 'bg-[--accent-primary]' : 'bg-slate-300'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                        aria-pressed={isTypingAnalysisOn}
                     >
-                        {sensitivityLabel}
-                        <div className="absolute top-full left-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-violet-600 transform -translate-x-1/2"></div>
+                        <span className={`${isTypingAnalysisOn ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                    </button>
+                </div>
+                <p className="text-[--text-secondary] text-lg">
+                    Analyzes for high intensity and correction rates to detect potential fatigue.
+                </p>
+            </div>
+
+            <div>
+                <div className="flex justify-between items-center mb-4">
+                     <div className="flex items-center gap-3">
+                        <BrainIcon className="w-8 h-8 text-[--text-secondary]" />
+                        <h3 className="text-2xl font-semibold text-[--text-primary]">Emotional Typing Patterns</h3>
                     </div>
-                    <input
-                        type="range"
-                        id="scroll-sensitivity"
-                        min="1"
-                        max="3"
-                        step="1"
-                        value={scrollSensitivity}
-                        onChange={onSensitivityChange}
-                        disabled={!isScrollAnalysisOn}
-                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-violet-500 disabled:accent-slate-600"
-                    />
+                    <button
+                        onClick={() => onEmotionalToggle(!isEmotionalGuardOn)}
+                        className={`${isEmotionalGuardOn ? 'bg-[--accent-primary]' : 'bg-slate-300'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                        aria-pressed={isEmotionalGuardOn}
+                    >
+                        <span className={`${isEmotionalGuardOn ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                    </button>
                 </div>
+                <p className="text-[--text-secondary] text-lg">
+                    Analyzes for very high speed with low corrections to detect potential agitation.
+                </p>
             </div>
         </div>
     );
 };
-
-
-interface EmotionalGuardSettingsProps {
-    isEmotionalGuardOn: boolean;
-    onToggle: (enabled: boolean) => void;
-}
-
-const EmotionalGuardSettings: FC<EmotionalGuardSettingsProps> = ({ isEmotionalGuardOn, onToggle }) => {
-    return (
-        <div>
-            <div className="flex justify-between items-center mb-4">
-                 <div className="flex items-center gap-3">
-                    <BrainIcon className="w-8 h-8 text-slate-400" />
-                    <h3 className="text-2xl font-semibold text-slate-100">Emotional Guard</h3>
-                </div>
-                <button
-                    onClick={() => onToggle(!isEmotionalGuardOn)}
-                    className={`${
-                        isEmotionalGuardOn ? 'bg-violet-600' : 'bg-slate-700'
-                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
-                    aria-pressed={isEmotionalGuardOn}
-                >
-                    <span className={`${
-                        isEmotionalGuardOn ? 'translate-x-6' : 'translate-x-1'
-                    } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
-                </button>
-            </div>
-            <p className="text-slate-400 text-lg">
-                Analyzes typing for very high speed with low errors to detect potential agitation and suggest a break.
-            </p>
-        </div>
-    );
-};
-
 
 // --- MAIN APP COMPONENT ---
 
 export default function App() {
-  const [sleepTime, setSleepTime] = useState(() => getInitialValue('sleepTime', '22:00', String));
-  const [wakeTime, setWakeTime] = useState(() => getInitialValue('wakeTime', '06:00', String));
-  const [blockedApps, setBlockedApps] = useState(() => getInitialValue('blockedApps', ['YouTube', 'Twitter', 'Reddit', 'Facebook', 'Instagram'], JSON.parse));
+  const [theme, setTheme] = useState(() => getInitialValue('theme', 'theme-sunset', String));
   const [isTypingAnalysisOn, setIsTypingAnalysisOn] = useState(() => getInitialValue('isTypingAnalysisOn', true, (v) => v === 'true'));
   const [isEmotionalGuardOn, setIsEmotionalGuardOn] = useState(() => getInitialValue('isEmotionalGuardOn', true, (v) => v === 'true'));
-  const [isScrollAnalysisOn, setIsScrollAnalysisOn] = useState(() => getInitialValue('isScrollAnalysisOn', true, (v) => v === 'true'));
-  const [typingSensitivity, setTypingSensitivity] = useState(() => getInitialValue('typingSensitivity', 2, Number));
-  const [scrollSensitivity, setScrollSensitivity] = useState(() => getInitialValue('scrollSensitivity', 2, Number));
+  const [globalSensitivity, setGlobalSensitivity] = useState(() => getInitialValue('globalSensitivity', 2, Number));
+  const [analysisHistory, setAnalysisHistory] = useState<AnalysisResult[]>(() => getInitialValue('analysisHistory', [], JSON.parse));
 
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isActivityBlocked, setIsActivityBlocked] = useState(false);
-  const [isFatigueBlocked, setIsFatigueBlocked] = useState(false);
-  const [isEmotionBlocked, setIsEmotionBlocked] = useState(false);
-  const [isScrollBlocked, setIsScrollBlocked] = useState(false);
-  const [snoozeUntil, setSnoozeUntil] = useState<Date | null>(null);
   const [storageError, setStorageError] = useState<string | null>(null);
-
-  const activityCount = useRef(0);
-  const activityTimer = useRef<number | null>(null);
-  const typingStats = useRef({ keys: 0, backspaces: 0 });
-  const typingAnalysisTimer = useRef<number | null>(null);
-  const scrollDelta = useRef(0);
-  const lastScrollY = useRef(window.scrollY);
-  const scrollAnalysisTimer = useRef<number | null>(null);
   
   // Persist settings to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('sleepTime', sleepTime);
-      localStorage.setItem('wakeTime', wakeTime);
-      localStorage.setItem('blockedApps', JSON.stringify(blockedApps));
+      localStorage.setItem('theme', theme);
       localStorage.setItem('isTypingAnalysisOn', String(isTypingAnalysisOn));
       localStorage.setItem('isEmotionalGuardOn', String(isEmotionalGuardOn));
-      localStorage.setItem('isScrollAnalysisOn', String(isScrollAnalysisOn));
-      localStorage.setItem('typingSensitivity', String(typingSensitivity));
-      localStorage.setItem('scrollSensitivity', String(scrollSensitivity));
-      if (storageError) {
-        setStorageError(null);
-      }
+      localStorage.setItem('globalSensitivity', String(globalSensitivity));
+      localStorage.setItem('analysisHistory', JSON.stringify(analysisHistory));
+
+      document.body.className = theme;
+
+      if (storageError) setStorageError(null);
     } catch (error) {
       console.error('Failed to save to localStorage', error);
-      setStorageError('Your browser settings might be blocking storage, or you might be in private browsing mode. Your settings may not be saved.');
+      setStorageError('Your browser settings might be blocking storage. Your settings may not be saved.');
     }
-  }, [sleepTime, wakeTime, blockedApps, isTypingAnalysisOn, isEmotionalGuardOn, isScrollAnalysisOn, typingSensitivity, scrollSensitivity, storageError]);
+  }, [theme, isTypingAnalysisOn, isEmotionalGuardOn, globalSensitivity, analysisHistory, storageError]);
   
-  // Clock effect
-  useEffect(() => {
-    const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timerId);
+  const handleNewAnalysis = useCallback((result: AnalysisResult) => {
+    setAnalysisHistory(prev => [...prev, result]);
   }, []);
-
-  const isSleepTime = useMemo(() => {
-    const [sleepHour, sleepMinute] = sleepTime.split(':').map(Number);
-    const [wakeHour, wakeMinute] = wakeTime.split(':').map(Number);
-    
-    const sleepTotalMinutes = sleepHour * 60 + sleepMinute;
-    const wakeTotalMinutes = wakeHour * 60 + wakeMinute;
-    
-    const currentHour = currentTime.getHours();
-    const currentMinute = currentTime.getMinutes();
-    const currentTotalMinutes = currentHour * 60 + currentMinute;
-    
-    if (sleepTotalMinutes > wakeTotalMinutes) { // Overnight schedule
-      return currentTotalMinutes >= sleepTotalMinutes || currentTotalMinutes < wakeTotalMinutes;
-    } else { // Same day schedule
-      return currentTotalMinutes >= sleepTotalMinutes && currentTotalMinutes < wakeTotalMinutes;
-    }
-  }, [currentTime, sleepTime, wakeTime]);
-  
-  const isSnoozed = useMemo(() => {
-    if (!snoozeUntil) return false;
-    return snoozeUntil > currentTime;
-  }, [snoozeUntil, currentTime]);
-
-  const blockType: BlockType = useMemo(() => {
-    if (isEmotionBlocked) return 'emotion';
-    if (isFatigueBlocked) return 'fatigue';
-    if (isScrollBlocked) return 'scroll';
-    if (isActivityBlocked) return 'activity';
-    return 'none';
-  }, [isEmotionBlocked, isFatigueBlocked, isScrollBlocked, isActivityBlocked]);
-
-  const handleSnooze = useCallback(() => {
-    setSnoozeUntil(new Date(Date.now() + SNOOZE_DURATION_MS));
-    setIsActivityBlocked(false);
-    setIsFatigueBlocked(false);
-    setIsEmotionBlocked(false);
-    setIsScrollBlocked(false);
-    activityCount.current = 0;
-    typingStats.current = { keys: 0, backspaces: 0 };
-    if (typingAnalysisTimer.current) clearTimeout(typingAnalysisTimer.current);
-    if (scrollAnalysisTimer.current) clearTimeout(scrollAnalysisTimer.current);
-    typingAnalysisTimer.current = null;
-    scrollAnalysisTimer.current = null;
-    scrollDelta.current = 0;
-  }, []);
-
-  const handleAddApp = useCallback((appName: string) => {
-    const lowerCaseAppName = appName.toLowerCase();
-    if (!blockedApps.find(app => app.toLowerCase() === lowerCaseAppName)) {
-        setBlockedApps(prev => [...prev, appName].sort((a,b) => a.localeCompare(b)));
-    }
-  }, [blockedApps]);
-
-  const handleRemoveApp = useCallback((appName: string) => {
-    setBlockedApps(prev => prev.filter(app => app !== appName));
-  }, []);
-
-  const handleActivity = useCallback(() => {
-     if (!isSleepTime || isSnoozed || blockType !== 'none') return;
-     
-     const isAppCurrentlyBlocked = blockedApps.some(app => document.title.toLowerCase().includes(app.toLowerCase()));
-     if (isAppCurrentlyBlocked && blockedApps.length > 0) {
-        if (activityTimer.current) clearTimeout(activityTimer.current);
-        activityCount.current += 1;
-        if (activityCount.current >= ACTIVITY_THRESHOLD) {
-          setIsActivityBlocked(true);
-          activityCount.current = 0;
-        } else {
-          activityTimer.current = window.setTimeout(() => { activityCount.current = 0; }, ACTIVITY_RESET_TIMEOUT);
-        }
-     }
-  }, [isSleepTime, isSnoozed, blockType, blockedApps]);
-
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if ((event.target as HTMLElement).id === 'typing-sandbox') return;
-    if ((!isTypingAnalysisOn && !isEmotionalGuardOn) || !isSleepTime || isSnoozed || blockType !== 'none') return;
-
-    const isBackspace = event.key === 'Backspace';
-    
-    typingStats.current.keys += 1;
-    if (isBackspace) {
-        typingStats.current.backspaces += 1;
-    }
-
-    if (!typingAnalysisTimer.current) {
-        typingAnalysisTimer.current = window.setTimeout(() => {
-            const { keys, backspaces } = typingStats.current;
-            const errorRatio = keys > 0 ? backspaces / keys : 0;
-            
-            // Check for emotional agitation first
-            if (isEmotionalGuardOn && keys >= EMOTIONAL_KEY_THRESHOLD && errorRatio <= EMOTIONAL_ERROR_RATIO_MAX) {
-                setIsEmotionBlocked(true);
-            } 
-            // Then check for fatigue
-            else if (isTypingAnalysisOn) {
-                const threshold = SENSITIVITY_LEVELS[typingSensitivity as keyof typeof SENSITIVITY_LEVELS];
-                if (keys >= threshold.keys && errorRatio >= threshold.errorRatio) {
-                    setIsFatigueBlocked(true);
-                }
-            }
-            
-            typingStats.current = { keys: 0, backspaces: 0 };
-            typingAnalysisTimer.current = null;
-        }, TYPING_ANALYSIS_WINDOW);
-    }
-  }, [isSleepTime, isSnoozed, blockType, isTypingAnalysisOn, isEmotionalGuardOn, typingSensitivity]);
-
-  const handleScroll = useCallback(() => {
-    if (!isScrollAnalysisOn || !isSleepTime || isSnoozed || blockType !== 'none') return;
-    
-    const currentScrollY = window.scrollY;
-    const delta = Math.abs(currentScrollY - lastScrollY.current);
-    lastScrollY.current = currentScrollY;
-    scrollDelta.current += delta;
-
-    if (!scrollAnalysisTimer.current) {
-        scrollAnalysisTimer.current = window.setTimeout(() => {
-            const threshold = SCROLL_SENSITIVITY_LEVELS[scrollSensitivity as keyof typeof SCROLL_SENSITIVITY_LEVELS];
-            if (scrollDelta.current >= threshold.distance) {
-                setIsScrollBlocked(true);
-            }
-            scrollDelta.current = 0;
-            scrollAnalysisTimer.current = null;
-        }, SCROLL_ANALYSIS_WINDOW);
-    }
-  }, [isSleepTime, isSnoozed, blockType, isScrollAnalysisOn, scrollSensitivity]);
-
-  useEffect(() => {
-    window.addEventListener('scroll', handleActivity);
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('scroll', handleActivity);
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('keydown', handleKeyDown);
-      if (activityTimer.current) clearTimeout(activityTimer.current);
-      if (typingAnalysisTimer.current) clearTimeout(typingAnalysisTimer.current);
-      if (scrollAnalysisTimer.current) clearTimeout(scrollAnalysisTimer.current);
-    };
-  }, [handleActivity, handleKeyDown, handleScroll]);
 
   return (
-    <main className="min-h-screen text-slate-200 flex flex-col items-center p-4 sm:p-6 md:p-8 text-lg">
-      <div className="w-full flex flex-col items-center space-y-8 max-w-2xl">
-        <Header />
-        <Dashboard
-          currentTime={currentTime}
-          sleepTime={sleepTime}
-          wakeTime={wakeTime}
-          isSleepTime={isSleepTime}
-          isSnoozed={isSnoozed}
-          blockedAppsCount={blockedApps.length}
-          isTypingAnalysisOn={isTypingAnalysisOn}
-          isEmotionalGuardOn={isEmotionalGuardOn}
-          isScrollAnalysisOn={isScrollAnalysisOn}
-        />
-        <Settings
-          sleepTime={sleepTime}
-          wakeTime={wakeTime}
-          onSleepTimeChange={(e) => setSleepTime(e.target.value)}
-          onWakeTimeChange={(e) => setWakeTime(e.target.value)}
-        />
-        <div className="w-full max-w-2xl bg-slate-800/50 p-8 rounded-2xl border border-slate-700 backdrop-blur-lg">
+    <main className="min-h-screen flex flex-col items-center p-4 sm:p-6 md:p-8 text-lg">
+      <div className="w-full flex flex-col items-center space-y-8">
+        <Header theme={theme} setTheme={setTheme} />
+        
+        <Card className="max-w-5xl">
             <div className="flex items-center gap-3 mb-4">
-                <BeakerIcon className="w-8 h-8 text-slate-400" />
-                <h2 className="text-4xl font-semibold text-slate-100">Analysis Suite & Sandbox</h2>
+                <BrainIcon className="w-8 h-8 text-[--text-secondary]" />
+                <h2 className="text-4xl font-semibold text-[--text-primary]">Interactive Psychological Analysis</h2>
             </div>
-            <p className="text-slate-400 text-lg mb-6">
-                Type in the box to see how the analysis works in real-time. Adjust the settings below to see how they impact detection.
+            <p className="text-[--text-secondary] text-lg mb-8 max-w-3xl">
+                Engage in a conversation with our AI. After you send a message, the app will analyze your typing patterns and the sentiment of your words.
             </p>
 
-            <div className="border-b border-slate-700/50 pb-6 mb-6">
-                 <TypingSandbox
-                    isTypingAnalysisOn={isTypingAnalysisOn}
-                    isEmotionalGuardOn={isEmotionalGuardOn}
-                    typingSensitivity={typingSensitivity}
-                />
-            </div>
-            
-            <div>
-                <h3 className="text-3xl font-semibold text-slate-100 mb-6">Detection Settings</h3>
-                <div className="space-y-8">
-                    <TypingAnalysisSettings
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+                <div className="lg:col-span-3">
+                     <ChatAnalysisSession
                         isTypingAnalysisOn={isTypingAnalysisOn}
-                        onToggle={setIsTypingAnalysisOn}
-                        typingSensitivity={typingSensitivity}
-                        onSensitivityChange={(e) => setTypingSensitivity(Number(e.target.value))}
-                    />
-                    <EmotionalGuardSettings
                         isEmotionalGuardOn={isEmotionalGuardOn}
-                        onToggle={setIsEmotionalGuardOn}
+                        sensitivity={globalSensitivity}
+                        onAnalysisComplete={handleNewAnalysis}
                     />
-                    <ScrollAnalysisSettings
-                        isScrollAnalysisOn={isScrollAnalysisOn}
-                        onToggle={setIsScrollAnalysisOn}
-                        scrollSensitivity={scrollSensitivity}
-                        onSensitivityChange={(e) => setScrollSensitivity(Number(e.target.value))}
+                </div>
+                <div className="lg:col-span-2">
+                    <AnalysisSettings
+                        isTypingAnalysisOn={isTypingAnalysisOn}
+                        onTypingToggle={setIsTypingAnalysisOn}
+                        isEmotionalGuardOn={isEmotionalGuardOn}
+                        onEmotionalToggle={setIsEmotionalGuardOn}
+                        sensitivity={globalSensitivity}
+                        onSensitivityChange={(e) => setGlobalSensitivity(Number(e.target.value))}
                     />
                 </div>
             </div>
-        </div>
-        <BlocklistSettings
-            blockedApps={blockedApps}
-            onAddApp={handleAddApp}
-            onRemoveApp={handleRemoveApp}
-        />
+        </Card>
+        
+        <AnalysisHistory history={analysisHistory} />
       </div>
-      <BlockingOverlay blockType={blockType} onSnooze={handleSnooze} />
       <ErrorBanner message={storageError} onDismiss={() => setStorageError(null)} />
     </main>
   );
