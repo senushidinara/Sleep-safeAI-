@@ -74,26 +74,28 @@ We built Sleep Safe on a modern, robust architecture designed for security, scal
 
 <br/>
 
-This diagram shows the secure, three-tiered structure of the application we implemented. The frontend in the browser **never** communicated directly with the external API, ensuring our access tokens remained 100% confidential.
+This diagram shows the secure, multi-service architecture we implemented. The frontend in the browser **never** communicated directly with external APIs, ensuring all our access tokens remained 100% confidential in our backend orchestrator.
 
-**Tiered Architecture:**
+**Backend-for-Frontend (BFF) Architecture:**
 ```
-+------------------+           +----------------------------+           +--------------------------+
-|                  |           |                            |           |                          |
-| 🌐 User's Browser|           |  ☁️ Vultr Cloud Server      |           |  💧 Liquidmetal Raindrop  |
-|  (Frontend App)  |           | (Nginx + Node.js API)      |           |     API Service          |
-|                  |           |                            |           |                          |
-+------------------+           +----------------------------+           +--------------------------+
-        |                                  |                                  |
-        |  1. Makes API Request to our     |                                  |
-        |     server (/api/...)            |  2. Proxies Request & Adds        |
-        +--------------------------------> |     Secure Token                 |
-        |                                  +--------------------------------> |  3. Validates & sends data
-        |                                  <--------------------------------+
-        |                                  |                                  |
-        |  4. Returns sanitized data       |                                  |
-        <--------------------------------+ |                                  |
-        |                                  |                                  |
++------------------+           +-----------------------------+           +--------------------------+
+|                  |           |                             |---------> |  💧 Liquidmetal Raindrop  |
+| 🌐 User's Browser|           |   ☁️ Vultr Cloud Server      |  2a. Call |     (Data Source)        |
+|  (Frontend App)  |           |  (Nginx + Node.js Backend)  | <---------|                          |
+|                  |           |                             |           +--------------------------+
++------------------+           +-----------------------------+
+        |                                  |
+        | 1. Makes Request to our backend  |
+        +--------------------------------> |
+        |                                  |           +--------------------------+
+        |                                  |---------> |   🔊 ElevenLabs API      |
+        |                                  |  2b. Call |      (TTS Service)       |
+        |                                  | <---------|                          |
+        |                                  |           +--------------------------+
+        |                                  |
+        |      3. Returns JSON data and/or |
+        |         Audio Stream to Browser  |
+        <--------------------------------+
 ```
 </details>
 
@@ -114,5 +116,11 @@ The beautiful and interactive user interface **was prototyped and rapidly built*
 
 *   **Our Mastery Moment 🏆:** Our "next level" moment was integrating the Gemini-generated frontend with our custom Vultr backend. We skillfully modified the React components to make secure `fetch` calls to our own `/api/liquidraindrops` endpoint.
 *   **The Impact 🌉:** This crucial step transformed a static UI into a dynamic, data-driven application. It proved we could seamlessly connect AI-generated code with a custom, secure infrastructure, massively accelerating our development without sacrificing quality or security.
+
+### 4. Giving the App a Voice with ElevenLabs 🔊
+To elevate the experience from a visual interface to an immersive co-pilot, **we integrated ElevenLabs** to provide a calming, narrative voice for the AI's insights.
+
+*   **Our Mastery Moment 🏆:** Our backend Node.js app evolved into an intelligent orchestrator. It learned to make chained API calls: first, to retrieve data or generate text with Gemini, and then a second, conditional call to the ElevenLabs API to convert that text into a high-quality audio stream. We mastered handling API keys for multiple services and processing the binary audio data for seamless delivery to the frontend.
+*   **The Impact 💪:** This transformed the application. Instead of just reading insights, users could *listen* to them, making the experience more personal, accessible, and therapeutic. It turned a data tool into a genuine digital companion, significantly enhancing user engagement.
 
 </details>
