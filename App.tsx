@@ -73,6 +73,12 @@ const ChartBarIcon: FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const LightBulbIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M12 2.25a.75.75 0 01.75.75v.518c.95.15 1.84.46 2.64.884a.75.75 0 01-.46 1.352 6.75 6.75 0 00-4.86 4.86.75.75 0 01-1.352.46A8.25 8.25 0 019.482 3.52v-.518a.75.75 0 01.75-.75z" />
+        <path fillRule="evenodd" d="M12 21a8.25 8.25 0 01-8.25-8.25c0-3.322 1.965-6.133 4.797-7.41a.75.75 0 01.753 1.292 5.25 5.25 0 003.4 3.4.75.75 0 011.292.753A8.25 8.25 0 0112 21z" clipRule="evenodd" />
+    </svg>
+);
 
 // --- UI COMPONENTS ---
 
@@ -139,6 +145,35 @@ type AnalysisResult = {
   stats: { keys: number; backspaces: number; errorRatio: number; };
 };
 type ActiveTab = 'analysis' | 'settings';
+type CognitiveInsight = { insight: string; suggestion: string; };
+
+// --- ADVANCED AI COMPONENTS ---
+
+interface CognitiveInsightCardProps {
+    insight: string;
+    suggestion: string;
+    onAcceptSuggestion: () => void;
+    onDismiss: () => void;
+}
+
+const CognitiveInsightCard: FC<CognitiveInsightCardProps> = ({ insight, suggestion, onAcceptSuggestion, onDismiss }) => (
+    <div className="flex items-start gap-3 p-4 mb-3 bg-indigo-100 border border-indigo-200 rounded-lg animate-fade-in">
+        <LightBulbIcon className="w-8 h-8 text-indigo-500 flex-shrink-0 mt-1" />
+        <div className="flex-grow">
+            <h4 className="font-semibold text-indigo-800">Cognitive Insight</h4>
+            <p className="text-indigo-700 text-base">{insight}</p>
+            <button
+                onClick={onAcceptSuggestion}
+                className="mt-2 text-left text-base font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+                "{suggestion}"
+            </button>
+        </div>
+        <button onClick={onDismiss} aria-label="Dismiss insight">
+            <XCircleIcon className="w-6 h-6 text-indigo-400 hover:text-indigo-600" />
+        </button>
+    </div>
+);
 
 // --- CHAT COMPONENT ---
 interface ChatAnalysisSessionProps {
@@ -148,8 +183,10 @@ interface ChatAnalysisSessionProps {
     isTypingAnalysisOn: boolean;
     isEmotionalGuardOn: boolean;
     onAnalysisComplete: (result: AnalysisResult) => void;
+    cognitiveInsight: CognitiveInsight | null;
+    setCognitiveInsight: React.Dispatch<React.SetStateAction<CognitiveInsight | null>>;
 }
-const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessages, sensitivity, isTypingAnalysisOn, isEmotionalGuardOn, onAnalysisComplete }) => {
+const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessages, sensitivity, isTypingAnalysisOn, isEmotionalGuardOn, onAnalysisComplete, cognitiveInsight, setCognitiveInsight }) => {
     const [inputValue, setInputValue] = useState('');
     const [isBotReplying, setIsBotReplying] = useState(false);
     const chatRef = useRef<Chat | null>(null);
@@ -165,7 +202,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             chatRef.current = ai.current.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: 'You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation about their sleep habits. Ask thoughtful, open-ended questions. Based on their responses, provide simple, supportive analysis and gentle suggestions. Maintain a natural, empathetic, and slightly more detailed conversational flow.',
+                    systemInstruction: "You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation about their sleep habits. At the beginning of some user messages, you will receive a context tag like '[CONTEXT: sentiment=Negative, pattern=fatigue]'. Use this information to tailor your response to be more empathetic and relevant to the user's detected state, but do NOT mention the context tag or the analysis directly. For example, if the context is negative, adopt a more gentle and supportive tone.",
                 },
             });
         } catch (error) {
@@ -210,7 +247,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         }
     };
     
-    const runAnalysis = async (userMessage: string) => {
+    const runAnalysis = async (userMessage: string): Promise<AnalysisResult> => {
         const { keys, backspaces } = typingStats.current;
         const errorRatio = keys > 0 ? backspaces / keys : 0;
         
@@ -239,6 +276,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         onAnalysisComplete(finalResult);
         setLastTypingAnalysis(finalResult);
         typingStats.current = { keys: 0, backspaces: 0 };
+        return finalResult;
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -250,11 +288,15 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         setInputValue('');
         setIsBotReplying(true);
 
-        await runAnalysis(userMessage);
+        const analysisResult = await runAnalysis(userMessage);
 
         try {
             if (!chatRef.current) throw new Error("Chat session not initialized.");
-            const response = await chatRef.current.sendMessage({ message: userMessage });
+            
+            const context = `[CONTEXT: sentiment=${analysisResult.sentiment}, pattern=${analysisResult.typingPattern}]`;
+            const messageForBot = `${context} ${userMessage}`;
+
+            const response = await chatRef.current.sendMessage({ message: messageForBot });
             const botResponse = response.text;
             setMessages(prev => [...prev, { author: 'bot', text: botResponse }]);
         } catch (error) {
@@ -266,6 +308,10 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            handleSendMessage(event);
+        }
         if (!isTypingAnalysisOn && !isEmotionalGuardOn) return;
         typingStats.current.keys += 1;
         if (event.key === 'Backspace') {
@@ -302,6 +348,17 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
                     <div ref={messagesEndRef} />
                 </div>
             </div>
+             {cognitiveInsight && (
+                <CognitiveInsightCard
+                    insight={cognitiveInsight.insight}
+                    suggestion={cognitiveInsight.suggestion}
+                    onAcceptSuggestion={() => {
+                        setInputValue(prev => prev ? `${prev} ${cognitiveInsight.suggestion}` : cognitiveInsight.suggestion);
+                        setCognitiveInsight(null);
+                    }}
+                    onDismiss={() => setCognitiveInsight(null)}
+                />
+            )}
             <form onSubmit={handleSendMessage} className="flex gap-3 mb-2">
                 <textarea
                     value={inputValue}
@@ -450,53 +507,79 @@ const MarkdownRenderer: FC<{ content: string }> = ({ content }) => {
     return <div className="prose">{renderContent()}</div>;
 };
 
-const SessionSummary: FC<{ history: AnalysisResult[] }> = ({ history }) => {
-    if (history.length === 0) return null;
+const TrendChart: FC<{ history: AnalysisResult[] }> = ({ history }) => {
+    if (history.length < 2) {
+        return <div className="text-center text-[--text-secondary] py-8">More data needed to show trends.</div>;
+    }
 
-    const sentimentCounts = history.reduce((acc, curr) => {
-        acc[curr.sentiment] = (acc[curr.sentiment] || 0) + 1;
-        return acc;
-    }, {} as Record<Sentiment, number>);
-
-    const totalSentiments = history.length;
-    const sentimentPercentages = {
-        Positive: ((sentimentCounts.Positive || 0) / totalSentiments) * 100,
-        Negative: ((sentimentCounts.Negative || 0) / totalSentiments) * 100,
-        Neutral: ((sentimentCounts.Neutral || 0) / totalSentiments) * 100,
+    const width = 300;
+    const height = 100;
+    const padding = 20;
+    
+    const sentimentToY = (sentiment: Sentiment) => {
+        if (sentiment === 'Positive') return padding;
+        if (sentiment === 'Negative') return height - padding;
+        return height / 2;
     };
+
+    const points = history.map((item, i) => ({
+        x: history.length > 1 ? (i / (history.length - 1)) * (width - 2 * padding) + padding : width / 2,
+        y: sentimentToY(item.sentiment),
+        pattern: item.typingPattern,
+        sentiment: item.sentiment,
+    }));
+
+    const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + `${p.x} ${p.y}`).join(' ');
     
-    const overallSentiment = Object.keys(sentimentCounts).length > 0 ? Object.entries(sentimentCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0] : 'Mixed';
-    
-    const patternCounts = history.reduce((acc, curr) => {
-        acc[curr.typingPattern] = (acc[curr.typingPattern] || 0) + 1;
-        return acc;
-    }, {} as Record<TypingPattern, number>);
-    
-    const dominantPattern = Object.keys(patternCounts).length > 0 ? Object.entries(patternCounts).reduce((a, b) => a[1] > b[1] ? a : b)[0] : 'Varied';
+    const patternColors: Record<TypingPattern, string> = {
+        stable: '#22C55E',
+        fatigue: '#F97316',
+        emotion: '#EF4444',
+    };
 
     return (
         <div className="p-4 bg-[--bg-primary] rounded-lg border border-[--border-color] mb-6">
-            <div className="grid grid-cols-2 gap-4 text-center mb-4">
-                <div>
-                    <p className="text-sm text-[--text-secondary]">Overall Sentiment</p>
-                    <p className="text-lg font-bold text-[--text-primary]">{overallSentiment}</p>
-                </div>
-                <div>
-                    <p className="text-sm text-[--text-secondary]">Dominant Typing</p>
-                    <p className="text-lg font-bold text-[--text-primary] capitalize">{dominantPattern}</p>
-                </div>
+            <div className="relative">
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" aria-label="Sentiment trend chart">
+                    <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#D1D5DB" strokeWidth="0.5" strokeDasharray="2,2" />
+                    <text x={padding - 15} y={padding} dy="0.3em" fontSize="8" fill="var(--text-secondary)">Pos</text>
+                    
+                    <line x1={padding} y1={height/2} x2={width - padding} y2={height/2} stroke="#D1D5DB" strokeWidth="0.5" strokeDasharray="2,2" />
+                    <text x={padding - 15} y={height/2} dy="0.3em" fontSize="8" fill="var(--text-secondary)">Neu</text>
+
+                    <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#D1D5DB" strokeWidth="0.5" strokeDasharray="2,2" />
+                    <text x={padding - 15} y={height-padding} dy="0.3em" fontSize="8" fill="var(--text-secondary)">Neg</text>
+
+                    <path d={pathD} fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+                    {points.map((p, i) => (
+                        <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={patternColors[p.pattern]} stroke="var(--bg-secondary)" strokeWidth="1.5">
+                            <title>{`Message ${i+1}: ${p.sentiment} Sentiment, ${p.pattern} typing`}</title>
+                        </circle>
+                    ))}
+                </svg>
             </div>
-            <div>
-                <p className="text-sm text-center font-medium text-[--text-secondary] mb-2">Sentiment Breakdown</p>
-                <div className="flex w-full h-3 rounded-full overflow-hidden bg-slate-200">
-                    <div className="bg-green-500" style={{ width: `${sentimentPercentages.Positive}%` }} title={`Positive: ${sentimentPercentages.Positive.toFixed(0)}%`}></div>
-                    <div className="bg-red-500" style={{ width: `${sentimentPercentages.Negative}%` }} title={`Negative: ${sentimentPercentages.Negative.toFixed(0)}%`}></div>
-                    <div className="bg-yellow-500" style={{ width: `${sentimentPercentages.Neutral}%` }} title={`Neutral: ${sentimentPercentages.Neutral.toFixed(0)}%`}></div>
-                </div>
+            <div className="flex justify-center gap-4 mt-3 text-xs text-[--text-secondary]">
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#22C55E]"></span>Stable</div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#F97316]"></span>Fatigue</div>
+                <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></span>Emotion</div>
             </div>
         </div>
     );
-}
+};
+
+const AnalysisSkeletonLoader: FC = () => (
+    <div className="p-4 bg-[--bg-primary] rounded-lg border border-[--border-color] animate-pulse">
+        <div className="h-6 w-2/3 bg-slate-200 rounded mb-4"></div>
+        <div className="h-4 w-full bg-slate-200 rounded mb-2"></div>
+        <div className="h-4 w-5/6 bg-slate-200 rounded mb-6"></div>
+        <div className="h-6 w-1/2 bg-slate-200 rounded mb-4"></div>
+        <div className="h-4 w-full bg-slate-200 rounded mb-2"></div>
+        <div className="h-4 w-full bg-slate-200 rounded mb-2"></div>
+        <div className="h-4 w-4/6 bg-slate-200 rounded"></div>
+    </div>
+);
+
 
 // --- MAIN APP COMPONENT ---
 
@@ -511,8 +594,10 @@ export default function App() {
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [activeTab, setActiveTab] = useState<ActiveTab>('analysis');
   const [storageError, setStorageError] = useState<string | null>(null);
+  const [cognitiveInsight, setCognitiveInsight] = useState<CognitiveInsight | null>(null);
 
   const ai = useRef<GoogleGenAI | null>(null);
+  const insightFiredRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -540,6 +625,26 @@ export default function App() {
     }
   }, [theme, isTypingAnalysisOn, isEmotionalGuardOn, globalSensitivity, analysisHistory, messages, finalAnalysis, storageError]);
   
+  // Cognitive Shift Detector
+  useEffect(() => {
+    if (analysisHistory.length < 3 || cognitiveInsight || insightFiredRef.current) return;
+
+    const lastThree = analysisHistory.slice(-3);
+    const [thirdLast, secondLast, last] = lastThree;
+    
+    const isNegativeState = (item: AnalysisResult) => item.sentiment === 'Negative' || item.typingPattern === 'emotion';
+    const isPositiveState = (item: AnalysisResult) => item.sentiment === 'Positive' && item.typingPattern === 'stable';
+
+    if (isPositiveState(thirdLast) && isNegativeState(secondLast) && isNegativeState(last)) {
+        setCognitiveInsight({
+            insight: "A shift in tone and typing pattern was detected.",
+            suggestion: "Would you like to explore what changed?"
+        });
+        insightFiredRef.current = true; // Prevents it from firing again this session
+    }
+  }, [analysisHistory, cognitiveInsight]);
+
+
   const handleNewAnalysis = useCallback((result: AnalysisResult) => {
     setAnalysisHistory(prev => [...prev, result]);
   }, []);
@@ -605,6 +710,8 @@ ${finalAnalysis || "Not generated yet."}
         setMessages([{ author: 'bot', text: "Hello! To begin our session, could you tell me a little about how you slept last night?" }]);
         setAnalysisHistory([]);
         setFinalAnalysis(null);
+        setCognitiveInsight(null);
+        insightFiredRef.current = false;
     }
   };
 
@@ -617,7 +724,7 @@ ${finalAnalysis || "Not generated yet."}
         
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
             <div className="lg:col-span-7">
-                <ChatAnalysisSession messages={messages} setMessages={setMessages} isTypingAnalysisOn={isTypingAnalysisOn} isEmotionalGuardOn={isEmotionalGuardOn} sensitivity={globalSensitivity} onAnalysisComplete={handleNewAnalysis} />
+                <ChatAnalysisSession messages={messages} setMessages={setMessages} isTypingAnalysisOn={isTypingAnalysisOn} isEmotionalGuardOn={isEmotionalGuardOn} sensitivity={globalSensitivity} onAnalysisComplete={handleNewAnalysis} cognitiveInsight={cognitiveInsight} setCognitiveInsight={setCognitiveInsight} />
             </div>
             <div className="lg:col-span-5">
                  <Card className="h-full">
@@ -634,18 +741,20 @@ ${finalAnalysis || "Not generated yet."}
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-3">
                                         <ChartBarIcon className="w-6 h-6 text-[--text-secondary]" />
-                                        <h3 className="text-xl font-semibold text-[--text-primary]">Session Summary</h3>
+                                        <h3 className="text-xl font-semibold text-[--text-primary]">Sentiment Trend</h3>
                                     </div>
                                     <button onClick={handleExportSession} disabled={analysisHistory.length === 0} className="text-sm font-medium text-[--accent-primary] hover:text-[--accent-primary-hover] disabled:opacity-50 disabled:cursor-not-allowed">Export Session</button>
                                 </div>
-                                <SessionSummary history={analysisHistory} />
+                                <TrendChart history={analysisHistory} />
                             </div>
                             <div className="border-t border-[--border-color] pt-6">
                                 <div className="flex items-center gap-3 mb-3">
                                     <DocumentTextIcon className="w-6 h-6 text-[--text-secondary]" />
                                     <h3 className="text-xl font-semibold text-[--text-primary]">Final Analysis & Sleep Plan</h3>
                                 </div>
-                                {finalAnalysis ? (
+                                {isGeneratingPlan ? (
+                                    <AnalysisSkeletonLoader />
+                                ) : finalAnalysis ? (
                                     <div className="p-4 bg-[--bg-primary] rounded-lg border border-[--border-color] max-h-96 overflow-y-auto">
                                         <MarkdownRenderer content={finalAnalysis} />
                                     </div>
