@@ -1,184 +1,139 @@
+
 # Sleep Safe 😴🛡️✨
 
-### Your intelligent and proactive digital wellness dashboard.
+### An Advanced Cognitive & Behavioral Analysis Engine
 
-> An innovative application that analyzes conversational patterns to provide proactive cognitive insights, a context-aware AI chat experience, visual trend summaries, and a personalized, actionable wellness plan.
+> An innovative application that leverages granular sentiment detection and behavioral typing analysis to calculate a user's real-time **Cognitive Load**. It provides a proactive, context-aware AI chat experience, dynamic data visualizations, and a deeply personalized wellness plan.
 
-Sleep Safe is your personal guardian for digital wellness. 🌙 It uses a **smart, privacy-first, behavior-based approach** to help you understand your state of mind. It now features a proactive AI that detects shifts in your emotional state, providing real-time insights to guide your conversation toward greater self-awareness.
+Sleep Safe is your personal guardian for digital wellness. 🌙 It has evolved into a sophisticated analysis engine that moves beyond simple metrics to provide a holistic understanding of your state of mind. By synthesizing *what* you say with *how* you say it, it generates powerful, actionable insights to help you build healthier digital habits.
 
 ---
 
 ## ✨ Key Features
 
-*   **🧠 Advanced AI-Powered Insights (New!):**
-    *   **Cognitive Shift Detection:** The app's AI now actively monitors your conversation for significant shifts in tone and typing patterns.
-    *   **Proactive Insights:** When a negative cognitive shift is detected, the app presents a gentle, actionable insight to help you explore your feelings in the moment.
-    *   **Context-Aware Chatbot:** The AI assistant receives real-time context about your detected emotional state, allowing it to provide significantly more empathetic and relevant responses.
-*   **📊 Dynamic Sentiment Trend Chart (New!):** Get a rich, at-a-glance overview of your session's emotional journey with a dynamic line chart that visualizes:
-    *   **Sentiment Arc:** Tracks your sentiment (Positive, Negative, Neutral) from message to message.
-    *   **Typing Pattern Overlays:** Each point is color-coded to show the dominant typing pattern (Stable, Fatigue, or Emotion) for that moment.
-*   **🚀 Comprehensive Final Analysis & Sleep Plan:** After your conversation, the app synthesizes all session data using the powerful **`gemini-2.5-pro`** model to generate:
-    *   A **holistic analysis** of your session, rendered in beautiful Markdown.
-    *   A **personalized, actionable sleep plan** with concrete steps.
-*   **🎨 Dynamic Theming:** Your space, your style. Choose from multiple warm themes like "Sunset," "Ocean," or "Twilight" to personalize your experience.
-*   **💾 Full User Control:**
-    *   **Export Session:** Download a complete `.txt` file of your entire session.
-    *   **Reset Session:** Start fresh at any time with a confirmation-protected reset button.
-*   **🔒 Completely Private:** All analysis happens in your browser. Your data is managed via `localStorage`, ensuring your complete privacy.
+*   **🔬 Granular Emotional Analysis (New!):** The AI now detects a wide spectrum of emotions—such as **Anxious, Frustrated, Calm, or Content**—providing a much richer emotional context than simple positive/negative analysis.
+*   **📈 Cognitive Load Monitoring (New!):** A new, core metric that synthesizes granular sentiment, emotional intensity, and behavioral typing patterns into a single, powerful score (0-100). This allows for at-a-glance identification of moments of high stress or mental fatigue.
+*   **🧠 Advanced AI-Powered Insights:**
+    *   **Proactive Shift Detection:** The app's AI actively monitors your Cognitive Load score for sharp increases, presenting a gentle, actionable insight to help you explore your feelings in the moment.
+    *   **Hyper Context-Aware Chatbot:** The AI assistant receives the specific emotion *and* the Cognitive Load score with every message, allowing it to provide dramatically more precise, empathetic, and relevant responses.
+*   **📊 Dynamic Cognitive Load Trend Chart:** The primary data visualization now tracks your Cognitive Load over time, providing a clear and immediate overview of your session's cognitive and emotional journey.
+*   **🚀 Comprehensive Final Analysis & Sleep Plan:** At the end of your session, the app synthesizes all the rich data points using the powerful **`gemini-2.5-pro`** model to generate a holistic analysis and a personalized, actionable sleep plan.
+*   **💾 Full User Control & Privacy:** Export your entire session as a `.txt` file, reset anytime, and rest assured that all analysis happens in your browser via `localStorage` for complete privacy.
 
 ---
+
+## 🏛️ Architectural Overview
+
+Sleep Safe operates on a modular, multi-layered architecture designed for real-time analysis, proactive intervention, and holistic synthesis.
+
+```
+                                       ┌───────────────────────────┐
+                                       │        UI Layer 🎨        │
+                                       │ (React Components, Theming) │
+                                       └─────────────▲─────────────┘
+                                                     │ (Renders)
+                                       ┌─────────────┴─────────────┐
+                                       │  State Management Core ⚙️  │
+                                       │   (useState, useEffect,     │
+                                       │      useRef, localStorage)  │
+                                       └──────┬─────────┬──────────┘
+                                              │         │ (Updates)
+               (Triggers) ┌───────────────────┘         └──────────────────┐
+                        │                                                 │
+                        ▼                                                 ▼
+┌───────────────────────────────────┐                        ┌──────────────────────────────────┐
+│     Real-Time Analysis Engine     │                        │      Proactive Insight Engine      │
+│  - Typing Pattern Detector        │                        │   - Cognitive Shift Detector     │
+│  - Granular Sentiment API Call    │                        │   - Fires UI Insight Card        │
+│  - Cognitive Load Calculator      │                        └──────────────────────────────────┘
+└──────────────┬────────────────────┘
+               │ (Provides Context)
+               ▼
+┌───────────────────────────────────┐                        ┌──────────────────────────────────┐
+│      Context-Aware AI Core 🤖     │                        │    Session Synthesis Engine 🚀     │
+│   - Receives enriched context     │ (User Trigger) ──────▶ │   - Aggregates All Session Data  │
+│   - Generates empathetic response │                        │   - Calls Gemini 2.5 Pro         │
+└───────────────────────────────────┘                        │   - Generates Final Markdown Plan│
+                                                             └──────────────────────────────────┘
+```
+
+---
+
+## 🌊 Data Flow & Analysis Pipeline
+
+This diagram illustrates how a single user message is processed through the entire real-time analysis pipeline to generate multi-faceted insights.
+
+```
+[User Input] ────▶ "I'm so stressed about work."
+     │
+     │ 1. BEHAVIOR CAPTURE
+     │   (onKeyDown listener)
+     │
+     ├─▶ Typing Stats: {keys: 30, backspaces: 5, errorRatio: 0.16}
+     │
+     └─▶ Typing Pattern Analysis: 'fatigue' (based on thresholds)
+     
+              │
+              │ 2. CONTENT ANALYSIS
+              │   (async API call)
+              │
+              ├─▶ Gemini API Call: "Analyze sentiment: '...'"
+              │
+              └─▶ Granular Sentiment: 'Anxious'
+     
+                       │
+                       │ 3. COGNITIVE SYNTHESIS
+                       │   (local calculation)
+                       │
+                       ├─▶ Cognitive Load Calculation:
+                       │     - Sentiment Score ('Anxious') => 75
+                       │     - Pattern Multiplier ('fatigue') => 1.1
+                       │
+                       └─▶ Cognitive Load: 83 / 100
+     
+                                │
+                                │ 4. STATE UPDATE & RENDER
+                                │   (React setState)
+                                │
+                                ├─▶ Update `analysisHistory` state
+                                │
+                                ├─▶ Re-render UI:
+                                │     - Update Cognitive Load Chart
+                                │     - Add entry to Session Journal
+                                │
+                                └─▶ Trigger Proactive Engine (checks history for shifts)
+     
+                                         │
+                                         │ 5. AI CONTEXTUALIZATION
+                                         │
+                                         ├─▶ Construct Enriched Prompt:
+                                         │   "[CONTEXT: sentiment=Anxious, pattern=fatigue, load=83]
+                                         │    I'm so stressed about work."
+                                         │
+                                         └─▶ Send to Gemini Chat API
+     
+                                                  │
+                                                  │ 6. AI RESPONSE
+                                                  │
+                                                  └─▶ Bot Message: "It sounds like work is really weighing
+                                                                     heavily on you right now. I'm here to listen."
+```
+
+This sophisticated, multi-layered approach provides immediate feedback, proactive guidance, a more intelligent conversational partner, and a powerful, holistic conclusion when you're ready for it.
+```
 
 ## 🖼️ App Preview
 
 A glimpse into the intelligent, proactive, and powerful new interface of Sleep Safe.
 
-### ✨ The Proactive Wellness Dashboard
+### ✨ The Advanced Cognitive Load Dashboard
 
-The app now features a proactive "Cognitive Insight" card that appears below the chat when the AI detects a significant shift in your emotional state, offering a chance for deeper reflection.
+The main view, featuring the new "Cognitive Load Trend" chart, which provides a powerful, at-a-glance visualization of your mental state throughout the session.
 
-*(Screenshot description: The main view of the app. Below the main chat window, a new "Cognitive Insight" card is displayed, featuring a lightbulb icon and a gentle message about a detected shift in tone, with a clickable prompt suggestion.)*
+*(Screenshot description: The main view of the app. The side panel prominently features the new "Cognitive Load Trend" chart. The chart's Y-axis is labeled "High" at the top and "Low" at the bottom, and a line graph plots the user's cognitive load score over time.)*
 
-### 🔬 The Advanced Sentiment Trend Chart
+### 🔬 Granular, Real-Time Analysis
 
-The former summary has been replaced by a dynamic trend chart, plotting sentiment over time with color-coded overlays for typing patterns.
+Each message is now analyzed for nuanced sentiment and a composite Cognitive Load score, displayed instantly below the chat and logged in the Session Journal.
 
-*(Screenshot description: A close-up of the new "Sentiment Trend" chart in the side panel. It shows a line graph moving between "Positive," "Neutral," and "Negative" levels, with colored dots on the line indicating different typing patterns.)*
-
-### ⚙️ The Context-Aware Conversation
-
-The AI's responses are now more empathetic and relevant, as it receives and interprets your real-time psychological state with every message you send.
-
-*(Screenshot description: A chat conversation where the user has expressed frustration. The AI's response is gentle and supportive, demonstrating its enhanced contextual awareness, e.g., "It sounds like that's really weighing on you. Let's talk through it." )*
-
----
-
-## ⚙️ How It Works
-
-### 🏗️ High-Level Architecture
-
-Sleep Safe now operates on an advanced, multi-loop architecture: a real-time analysis loop, a proactive cognitive detection loop, and a final, session-wide synthesis step.
-
-```
-                                  ┌───────────────────────────┐
-                                  │   Sleep Safe UI/UX 🎨     │
-                                  │  (Dashboard + Insights)   │
-                                  └─────────────▲─────────────┘
-                                                │ Renders State
-                                  ┌─────────────┴─────────────┐
-                                  │      Core App Logic ⚙️      │
-                                  │ (React State, Hooks, Logic) │
-                                  └─────────────┬─────────────┘
-                                                │
-                 ┌──────────────────────────────┼────────────────────────────────┐
-                 │                              │                                │
-                 ▼                              ▼                                ▼
-┌───────────────────────────┐   ┌───────────────────────────┐     ┌───────────────────────────────┐
-│  Real-Time Analysis Loop  │   │ Proactive Detection Loop  │     │    Session-Wide Synthesis   │
-│(Per-Message Typing+Senti) │   │ (Monitors history for shifts) │   │ (User-Triggered Final Plan) │
-└───────────┬───────────────┘   └─────────────┬─────────────┘     └───────────────────────────────┘
-            │                                 │
-            └───────────────┬─────────────────┘
-                            │
-                            ▼
-            ┌───────────────────────────┐
-            │ Context-Aware Chat AI 🤖  │
-            │(Receives analysis data to │
-            │  inform its responses)    │
-            └───────────────────────────┘
-```
-
-<details>
-<summary><strong>🧠 The Advanced Analysis Suite (Click to Expand)</strong></summary>
-
-The new suite adds a layer of proactive intelligence to the existing analysis flow.
-
-### **🔢 Analysis Flow Breakdown**
-
-#### Phase 1: Real-time, Per-Message Analysis (The Inner Loop)
-
-This happens every time you send a message, feeding the Trend Chart and Session Journal.
-
-```
-[ User Action: Clicks "Send" 💬 ]
-            │
-            ▼
-┌──────────────────────────────────┐
-│ 1. Local Typing & API Sentiment  │
-│           Analysis               │
-└───────────┬────────────────────┘
-            │
-            ▼
-┌──────────────────────────────────┐
-│ 2. Contextualize AI Prompt       │
-│ (Prepend analysis data for bot)  │
-└───────────┬────────────────────┘
-            │
-            ▼
-┌──────────────────────────────────┐
-│ 3. Send to Context-Aware AI      │
-│ (Bot uses context for empathy)   │
-└───────────┬────────────────────┘
-            │
-            ▼
-┌──────────────────────────────────┐
-│ 4. Log Insight & Update UI       │
-│ (Add to Journal, update Chart)   │
-└──────────────────────────────────┘
-```
-
-#### Phase 2: Proactive Cognitive Detection (The Outer Loop)
-
-This new process runs in the background, constantly monitoring the analysis history.
-
-```
-[ Analysis History is Updated ]
-            │
-            ▼
-┌──────────────────────────┐
-│ 1. Scan Last ~3 Entries  │
-│   in Analysis History    │
-└───────────┬────────────┘
-            │
-            ▼
-┌──────────────────────────┐
-│ 2. Detect Pattern Shift? │
-│  (e.g., Positive -> Negative)│
-└───────────┬────────────┘
-            │
-            ▼ (If Shift Detected)
-┌──────────────────────────┐
-│ 3. Trigger Cognitive     │
-│       Insight UI         │
-└──────────────────────────┘
-```
-
-#### Phase 3: Final, Session-Wide Analysis (The Conclusion)
-
-This remains the user-initiated process that provides the ultimate value of the session:
-
-```
-[ User Action: Clicks "Generate Final Plan" 🚀 ]
-            │
-            ▼
-┌──────────────────────────┐
-│ 1. Synthesize All Data   │
-│ - Entire Chat Transcript │
-│ - Full Session Journal   │
-└───────────┬────────────┘
-            │
-            ▼
-┌──────────────────────────┐
-│ 2. Send to Gemini 2.5 Pro│
-│ (Leverage powerful model │
-│ for deep analysis)       │
-└───────────┬────────────┘
-            │
-            ▼
-    ┌───────────────────┐
-    │ Render Markdown   ├─▶ Show Final Analysis &
-    │      Report       │    Personalized Sleep Plan
-    └───────────────────┘
-
-```
-This advanced, multi-layered approach provides immediate feedback, proactive guidance, a more intelligent conversational partner, and a powerful, holistic conclusion when you're ready for it.
-</details>
+*(Screenshot description: A close-up of the area below the chat input. The "Last Message Analysis" section now shows three metrics: Typing Pattern, a granular Sentiment like "Anxious," and the "Cognitive Load" score.)*

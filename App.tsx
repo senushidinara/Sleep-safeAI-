@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, FC } from 'react';
 import { GoogleGenAI, Chat } from '@google/genai';
 
@@ -110,7 +111,7 @@ const Header: FC<{theme: string, setTheme: (theme: string) => void}> = ({theme, 
       <MoonIcon className="w-10 h-10 text-[--accent-primary]" />
       <h1 className="text-5xl md:text-6xl font-bold text-[--text-primary] tracking-tight">Sleep Safe</h1>
     </div>
-    <p className="text-[--text-secondary] mt-4 text-lg md:text-xl max-w-prose mx-auto">An interactive wellness journal to analyze typing patterns and promote healthier digital habits.</p>
+    <p className="text-[--text-secondary] mt-4 text-lg md:text-xl max-w-prose mx-auto">An advanced cognitive & behavioral analysis engine to promote digital wellness.</p>
     <ThemeSwitcher currentTheme={theme} onChangeTheme={setTheme} />
   </header>
 );
@@ -134,7 +135,7 @@ const ThemeSwitcher: FC<{currentTheme: string, onChangeTheme: (theme: string) =>
 
 // --- TYPES ---
 type Message = { author: 'bot' | 'user'; text: string; };
-type Sentiment = 'Positive' | 'Negative' | 'Neutral' | 'Unknown';
+type Sentiment = string; // More granular: 'Calm', 'Anxious', 'Frustrated', etc.
 type TypingPattern = 'fatigue' | 'emotion' | 'stable';
 type AnalysisResult = {
   id: string;
@@ -142,6 +143,7 @@ type AnalysisResult = {
   typingPattern: TypingPattern;
   typingConfidence: number | null;
   sentiment: Sentiment;
+  cognitiveLoad: number; // New metric: 0-100
   stats: { keys: number; backspaces: number; errorRatio: number; };
 };
 type ActiveTab = 'analysis' | 'settings';
@@ -202,7 +204,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             chatRef.current = ai.current.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: "You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation about their sleep habits. At the beginning of some user messages, you will receive a context tag like '[CONTEXT: sentiment=Negative, pattern=fatigue]'. Use this information to tailor your response to be more empathetic and relevant to the user's detected state, but do NOT mention the context tag or the analysis directly. For example, if the context is negative, adopt a more gentle and supportive tone.",
+                    systemInstruction: "You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation. At the beginning of some user messages, you will receive a context tag like '[CONTEXT: sentiment=Anxious, pattern=fatigue, cognitive_load=78]'. Use this information to tailor your response to be more empathetic and relevant to the user's detected state, but do NOT mention the context tag or the analysis directly. For example, if the sentiment is 'Anxious' and load is high, adopt a more gentle, calming, and supportive tone.",
                 },
             });
         } catch (error) {
@@ -229,24 +231,39 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         return Math.min(100, Math.max(0, Math.round(((keyRatio * 0.6) + (errorPerfRatio * 0.4)) * 100)));
     };
 
+    const GRANULAR_SENTIMENTS = ['Calm', 'Content', 'Hopeful', 'Neutral', 'Anxious', 'Frustrated', 'Sad', 'Agitated'];
     const getSentimentAnalysis = async (text: string): Promise<Sentiment> => {
         if (!ai.current) return 'Unknown';
         try {
             const response = await ai.current.models.generateContent({
                 model: 'gemini-2.5-flash',
-                contents: `Analyze the sentiment of the following text. Respond with only a single word: 'Positive', 'Negative', or 'Neutral'. Text: "${text}"`
+                contents: `Analyze the sentiment of the following text. Respond with only a single descriptive word from this list: ${GRANULAR_SENTIMENTS.join(', ')}. Text: "${text}"`
             });
             const sentiment = response.text.trim();
-            if (['Positive', 'Negative', 'Neutral'].includes(sentiment)) {
-                return sentiment as Sentiment;
+            if (GRANULAR_SENTIMENTS.includes(sentiment)) {
+                return sentiment;
             }
-            return 'Unknown';
+            return 'Neutral';
         } catch (error) {
             console.error("Sentiment analysis error:", error);
             return 'Unknown';
         }
     };
     
+    const calculateCognitiveLoad = (sentiment: Sentiment, pattern: TypingPattern): number => {
+        const sentimentScores: { [key: string]: number } = {
+            'Agitated': 95, 'Frustrated': 85, 'Sad': 80, 'Anxious': 75,
+            'Neutral': 40, 'Hopeful': 30, 'Content': 20, 'Calm': 10, 'Unknown': 50
+        };
+        const patternMultipliers: { [key in TypingPattern]: number } = {
+            'emotion': 1.15, 'fatigue': 1.1, 'stable': 1
+        };
+        const baseScore = sentimentScores[sentiment] || 50;
+        const finalScore = Math.min(100, Math.round(baseScore * patternMultipliers[pattern]));
+        return finalScore;
+    };
+
+
     const runAnalysis = async (userMessage: string): Promise<AnalysisResult> => {
         const { keys, backspaces } = typingStats.current;
         const errorRatio = keys > 0 ? backspaces / keys : 0;
@@ -263,6 +280,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         }
         
         const sentiment = await getSentimentAnalysis(userMessage);
+        const cognitiveLoad = calculateCognitiveLoad(sentiment, detectedPattern);
 
         const finalResult: AnalysisResult = {
             id: new Date().toISOString(),
@@ -270,6 +288,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             typingPattern: detectedPattern,
             typingConfidence: confidence,
             sentiment,
+            cognitiveLoad,
             stats: { keys, backspaces, errorRatio },
         };
 
@@ -293,7 +312,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         try {
             if (!chatRef.current) throw new Error("Chat session not initialized.");
             
-            const context = `[CONTEXT: sentiment=${analysisResult.sentiment}, pattern=${analysisResult.typingPattern}]`;
+            const context = `[CONTEXT: sentiment=${analysisResult.sentiment}, pattern=${analysisResult.typingPattern}, cognitive_load=${analysisResult.cognitiveLoad}]`;
             const messageForBot = `${context} ${userMessage}`;
 
             const response = await chatRef.current.sendMessage({ message: messageForBot });
@@ -380,19 +399,18 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
              {lastTypingAnalysis && (
                 <div className="mt-2 text-left p-3 bg-[var(--bg-primary)] rounded-lg animate-fade-in border border-[--border-color]">
                     <h3 className="text-lg font-semibold text-[--text-primary] mb-2 text-center">Last Message Analysis</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
                         <div>
                             <p className="text-sm text-[--text-secondary]">Typing Pattern</p>
                             <p className="text-xl font-bold text-[--text-primary] capitalize">{lastTypingAnalysis.typingPattern}</p>
-                            {lastTypingAnalysis.typingConfidence != null && (
-                                <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
-                                    <div className="bg-green-400 h-1.5 rounded-full" style={{ width: `${lastTypingAnalysis.typingConfidence}%` }}></div>
-                                </div>
-                            )}
                         </div>
                         <div>
                            <p className="text-sm text-[--text-secondary]">Sentiment</p>
                            <p className="text-xl font-bold text-[--text-primary]">{lastTypingAnalysis.sentiment}</p>
+                        </div>
+                         <div>
+                           <p className="text-sm text-[--text-secondary]">Cognitive Load</p>
+                           <p className="text-xl font-bold text-[--text-primary]">{lastTypingAnalysis.cognitiveLoad} / 100</p>
                         </div>
                     </div>
                 </div>
@@ -409,11 +427,12 @@ const SessionJournal: FC<{ history: AnalysisResult[] }> = ({ history }) => (
                 <div key={item.id} className="p-3 rounded-lg bg-[--bg-primary] border border-[--border-color]">
                     <div className="flex justify-between items-center text-xs text-[--text-secondary] mb-1">
                         <span>{item.timestamp}</span>
-                        <span>Keys: {item.stats.keys} | Errors: {(item.stats.errorRatio * 100).toFixed(1)}%</span>
+                        <span>Keys: {item.stats.keys} | Err: {(item.stats.errorRatio * 100).toFixed(0)}%</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                        <span className="font-semibold text-base text-[--text-primary] capitalize">Typing: {item.typingPattern}</span>
-                        <span className="font-semibold text-base text-[--text-primary]">Sentiment: {item.sentiment}</span>
+                    <div className="grid grid-cols-3 items-center text-center">
+                        <span className="font-semibold text-base text-[--text-primary] capitalize">{item.typingPattern}</span>
+                        <span className="font-semibold text-base text-[--text-primary]">{item.sentiment}</span>
+                         <span className="font-semibold text-base text-[--text-primary]">Load: {item.cognitiveLoad}</span>
                     </div>
                 </div>
             ))
@@ -513,20 +532,19 @@ const TrendChart: FC<{ history: AnalysisResult[] }> = ({ history }) => {
     }
 
     const width = 300;
-    const height = 100;
+    const height = 120;
     const padding = 20;
     
-    const sentimentToY = (sentiment: Sentiment) => {
-        if (sentiment === 'Positive') return padding;
-        if (sentiment === 'Negative') return height - padding;
-        return height / 2;
+    const cognitiveLoadToY = (load: number) => {
+        return height - padding - (load / 100) * (height - 2 * padding);
     };
 
     const points = history.map((item, i) => ({
         x: history.length > 1 ? (i / (history.length - 1)) * (width - 2 * padding) + padding : width / 2,
-        y: sentimentToY(item.sentiment),
+        y: cognitiveLoadToY(item.cognitiveLoad),
         pattern: item.typingPattern,
         sentiment: item.sentiment,
+        load: item.cognitiveLoad,
     }));
 
     const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + `${p.x} ${p.y}`).join(' ');
@@ -540,21 +558,18 @@ const TrendChart: FC<{ history: AnalysisResult[] }> = ({ history }) => {
     return (
         <div className="p-4 bg-[--bg-primary] rounded-lg border border-[--border-color] mb-6">
             <div className="relative">
-                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" aria-label="Sentiment trend chart">
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto" aria-label="Cognitive Load trend chart">
                     <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="#D1D5DB" strokeWidth="0.5" strokeDasharray="2,2" />
-                    <text x={padding - 15} y={padding} dy="0.3em" fontSize="8" fill="var(--text-secondary)">Pos</text>
+                    <text x={padding - 15} y={padding} dy="0.3em" fontSize="8" fill="var(--text-secondary)">High</text>
                     
-                    <line x1={padding} y1={height/2} x2={width - padding} y2={height/2} stroke="#D1D5DB" strokeWidth="0.5" strokeDasharray="2,2" />
-                    <text x={padding - 15} y={height/2} dy="0.3em" fontSize="8" fill="var(--text-secondary)">Neu</text>
-
                     <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#D1D5DB" strokeWidth="0.5" strokeDasharray="2,2" />
-                    <text x={padding - 15} y={height-padding} dy="0.3em" fontSize="8" fill="var(--text-secondary)">Neg</text>
+                    <text x={padding - 15} y={height-padding} dy="0.3em" fontSize="8" fill="var(--text-secondary)">Low</text>
 
                     <path d={pathD} fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
 
                     {points.map((p, i) => (
                         <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={patternColors[p.pattern]} stroke="var(--bg-secondary)" strokeWidth="1.5">
-                            <title>{`Message ${i+1}: ${p.sentiment} Sentiment, ${p.pattern} typing`}</title>
+                            <title>{`Message ${i+1}: Cognitive Load ${p.load}, Sentiment: ${p.sentiment}, Pattern: ${p.pattern}`}</title>
                         </circle>
                     ))}
                 </svg>
@@ -631,14 +646,16 @@ export default function App() {
 
     const lastThree = analysisHistory.slice(-3);
     const [thirdLast, secondLast, last] = lastThree;
-    
-    const isNegativeState = (item: AnalysisResult) => item.sentiment === 'Negative' || item.typingPattern === 'emotion';
-    const isPositiveState = (item: AnalysisResult) => item.sentiment === 'Positive' && item.typingPattern === 'stable';
 
-    if (isPositiveState(thirdLast) && isNegativeState(secondLast) && isNegativeState(last)) {
+    // Detect a sharp, sustained increase in cognitive load
+    const isSharpIncrease = last.cognitiveLoad > secondLast.cognitiveLoad * 1.5 && secondLast.cognitiveLoad > thirdLast.cognitiveLoad;
+    const wasInitialStateCalm = thirdLast.cognitiveLoad < 45; // Started from a relatively low load
+    const isCurrentStateHigh = last.cognitiveLoad > 65; // Ends in a high load state
+
+    if (wasInitialStateCalm && isSharpIncrease && isCurrentStateHigh) {
         setCognitiveInsight({
-            insight: "A shift in tone and typing pattern was detected.",
-            suggestion: "Would you like to explore what changed?"
+            insight: "It appears the intensity of our conversation has increased recently.",
+            suggestion: "Is there something specific on your mind?"
         });
         insightFiredRef.current = true; // Prevents it from firing again this session
     }
@@ -653,14 +670,14 @@ export default function App() {
     if (!ai.current) { setStorageError("AI service is not available."); return; }
     setIsGeneratingPlan(true); setFinalAnalysis(null);
     const fullTranscript = messages.map(m => `${m.author === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
-    const analysisSummary = analysisHistory.map(a => `- At ${a.timestamp}, user showed '${a.typingPattern}' typing and a '${a.sentiment}' sentiment.`).join('\n');
+    const analysisSummary = analysisHistory.map(a => `- At ${a.timestamp}, user showed '${a.typingPattern}' typing, a '${a.sentiment}' sentiment, and a cognitive load of ${a.cognitiveLoad}/100.`).join('\n');
     const prompt = `You are a helpful and empathetic wellness coach specializing in sleep science. Based on the following data from a user's session, provide a comprehensive final analysis and a personalized, actionable sleep plan.
 **Session Data:**
 **1. Full Conversation Transcript:**\n${fullTranscript}\n
-**2. Psychological Typing & Sentiment Analysis Journal:**\n${analysisSummary}\n
+**2. Cognitive & Behavioral Analysis Journal:**\n${analysisSummary}\n
 **Your Task:** Generate a response in Markdown format. The response should have two main sections:
-1.  **Final Analysis:** Start with a heading '### Final Analysis'. Summarize the user's potential state of mind. Be gentle, insightful, and avoid making medical diagnoses. Connect their words to their typing patterns. For example, "It seems like when you discussed..., your typing became more agitated, suggesting it's a sensitive topic."
-2.  **Your Personalized Sleep Plan:** Start with a heading '### Your Personalized Sleep Plan'. Provide 3-5 simple, concrete, and actionable steps the user can take. Frame these as gentle suggestions. For example, "**1. Create a Wind-Down Routine:** ..." or "**2. Mindful Journaling:** ...".
+1.  **Final Analysis:** Start with a heading '### Final Analysis'. Summarize the user's potential state of mind. Be gentle, insightful, and avoid making medical diagnoses. Connect their words to their typing patterns and cognitive load. For example, "I noticed when you discussed your workday, your cognitive load score increased significantly, suggesting this is a major source of stress."
+2.  **Your Personalized Sleep Plan:** Start with a heading '### Your Personalized Sleep Plan'. Provide 3-5 simple, concrete, and actionable steps the user can take based on the key stressors identified. Frame these as gentle suggestions. For example, "**1. Create a Wind-Down Routine:** ..." or "**2. Mindful Journaling:** ...".
 Keep the tone supportive, positive, and encouraging.`;
     
     try {
@@ -687,7 +704,7 @@ ${messages.map(m => `[${m.author.toUpperCase()}] ${m.text}`).join('\n')}
 ---
 
 ## Session Journal
-${analysisHistory.map(a => `- ${a.timestamp} | Typing: ${a.typingPattern} | Sentiment: ${a.sentiment} | Keys: ${a.stats.keys} | Error%: ${(a.stats.errorRatio*100).toFixed(1)}`).join('\n')}
+${analysisHistory.map(a => `- ${a.timestamp} | Typing: ${a.typingPattern} | Sentiment: ${a.sentiment} | Cognitive Load: ${a.cognitiveLoad}/100 | Keys: ${a.stats.keys} | Error%: ${(a.stats.errorRatio*100).toFixed(1)}`).join('\n')}
 
 ---
 
@@ -741,7 +758,7 @@ ${finalAnalysis || "Not generated yet."}
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-3">
                                         <ChartBarIcon className="w-6 h-6 text-[--text-secondary]" />
-                                        <h3 className="text-xl font-semibold text-[--text-primary]">Sentiment Trend</h3>
+                                        <h3 className="text-xl font-semibold text-[--text-primary]">Cognitive Load Trend</h3>
                                     </div>
                                     <button onClick={handleExportSession} disabled={analysisHistory.length === 0} className="text-sm font-medium text-[--accent-primary] hover:text-[--accent-primary-hover] disabled:opacity-50 disabled:cursor-not-allowed">Export Session</button>
                                 </div>
