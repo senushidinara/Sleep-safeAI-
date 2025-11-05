@@ -81,6 +81,12 @@ const LightBulbIcon: FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
+const FireIcon: FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path fillRule="evenodd" d="M12.963 2.286a.75.75 0 00-1.071 1.052A9.75 9.75 0 0110.5 18.75a8.25 8.25 0 01-3.427-.923 1.5 1.5 0 00-1.025.275 1.5 1.5 0 00-.733.883 1.5 1.5 0 00.513 1.574 1.5 1.5 0 001.372.238 9.752 9.752 0 0011.566-6.918 9.75 9.75 0 00-2.03-9.522.75.75 0 00-1.052-1.071zM10.5 16.5c0-1.034.223-2.036.64-2.952a.75.75 0 00-1.2-.75A8.25 8.25 0 009 18.75a6.75 6.75 0 006.75-6.75 6.75 6.75 0 00-1.88-4.535.75.75 0 00-1.127.942A5.25 5.25 0 0115 12a5.25 5.25 0 01-5.25 5.25.75.75 0 00-.75.75c0 .414.336.75.75.75A6.75 6.75 0 0015.75 12a.75.75 0 00-.75-.75H10.5z" clipRule="evenodd" />
+    </svg>
+);
+
 // --- UI COMPONENTS ---
 
 const Card: FC<{ children: React.ReactNode, className?: string }> = ({ children, className }) => (
@@ -111,7 +117,7 @@ const Header: FC<{theme: string, setTheme: (theme: string) => void}> = ({theme, 
       <MoonIcon className="w-10 h-10 text-[--accent-primary]" />
       <h1 className="text-5xl md:text-6xl font-bold text-[--text-primary] tracking-tight">Sleep Safe</h1>
     </div>
-    <p className="text-[--text-secondary] mt-4 text-lg md:text-xl max-w-prose mx-auto">An advanced cognitive & behavioral analysis engine to promote digital wellness.</p>
+    <p className="text-[--text-secondary] mt-4 text-lg md:text-xl max-w-prose mx-auto">An AI-Powered Thematic Cognitive Analysis Platform.</p>
     <ThemeSwitcher currentTheme={theme} onChangeTheme={setTheme} />
   </header>
 );
@@ -143,6 +149,7 @@ type AnalysisResult = {
   typingPattern: TypingPattern;
   typingConfidence: number | null;
   sentiment: Sentiment;
+  theme: string; // New: 'Work', 'Relationships', 'Health'
   cognitiveLoad: number; // New metric: 0-100
   stats: { keys: number; backspaces: number; errorRatio: number; };
 };
@@ -204,7 +211,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             chatRef.current = ai.current.chats.create({
                 model: 'gemini-2.5-flash',
                 config: {
-                    systemInstruction: "You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation. At the beginning of some user messages, you will receive a context tag like '[CONTEXT: sentiment=Anxious, pattern=fatigue, cognitive_load=78]'. Use this information to tailor your response to be more empathetic and relevant to the user's detected state, but do NOT mention the context tag or the analysis directly. For example, if the sentiment is 'Anxious' and load is high, adopt a more gentle, calming, and supportive tone.",
+                    systemInstruction: "You are a friendly and insightful assistant specializing in sleep psychology. Your goal is to engage the user in a conversation. At the beginning of some user messages, you will receive a context tag like '[CONTEXT: sentiment=Anxious, pattern=fatigue, theme=Work, cognitive_load=78]'. Use this information to tailor your response to be more empathetic and relevant to the user's detected state, but do NOT mention the context tag or the analysis directly. For example, if the theme is 'Work' and load is high, you might say 'It sounds like that situation at work is really weighing on you.' to show you understand the topic of stress.",
                 },
             });
         } catch (error) {
@@ -240,13 +247,24 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
                 contents: `Analyze the sentiment of the following text. Respond with only a single descriptive word from this list: ${GRANULAR_SENTIMENTS.join(', ')}. Text: "${text}"`
             });
             const sentiment = response.text.trim();
-            if (GRANULAR_SENTIMENTS.includes(sentiment)) {
-                return sentiment;
-            }
-            return 'Neutral';
+            return GRANULAR_SENTIMENTS.includes(sentiment) ? sentiment : 'Neutral';
         } catch (error) {
             console.error("Sentiment analysis error:", error);
             return 'Unknown';
+        }
+    };
+    
+     const getThematicAnalysis = async (text: string): Promise<string> => {
+        if (!ai.current) return 'General';
+        try {
+            const response = await ai.current.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `What is the main theme of this text? Respond with only one or two words (e.g., Work, Family, Health, Social, Finances, Self-reflection, General). Text: "${text}"`
+            });
+            return response.text.trim();
+        } catch (error) {
+            console.error("Thematic analysis error:", error);
+            return 'General';
         }
     };
     
@@ -279,7 +297,10 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             confidence = calculateFatigueConfidence(keys, errorRatio);
         }
         
-        const sentiment = await getSentimentAnalysis(userMessage);
+        const [sentiment, theme] = await Promise.all([
+            getSentimentAnalysis(userMessage),
+            getThematicAnalysis(userMessage)
+        ]);
         const cognitiveLoad = calculateCognitiveLoad(sentiment, detectedPattern);
 
         const finalResult: AnalysisResult = {
@@ -288,6 +309,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
             typingPattern: detectedPattern,
             typingConfidence: confidence,
             sentiment,
+            theme,
             cognitiveLoad,
             stats: { keys, backspaces, errorRatio },
         };
@@ -312,7 +334,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
         try {
             if (!chatRef.current) throw new Error("Chat session not initialized.");
             
-            const context = `[CONTEXT: sentiment=${analysisResult.sentiment}, pattern=${analysisResult.typingPattern}, cognitive_load=${analysisResult.cognitiveLoad}]`;
+            const context = `[CONTEXT: sentiment=${analysisResult.sentiment}, pattern=${analysisResult.typingPattern}, theme=${analysisResult.theme}, cognitive_load=${analysisResult.cognitiveLoad}]`;
             const messageForBot = `${context} ${userMessage}`;
 
             const response = await chatRef.current.sendMessage({ message: messageForBot });
@@ -399,7 +421,7 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
              {lastTypingAnalysis && (
                 <div className="mt-2 text-left p-3 bg-[var(--bg-primary)] rounded-lg animate-fade-in border border-[--border-color]">
                     <h3 className="text-lg font-semibold text-[--text-primary] mb-2 text-center">Last Message Analysis</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-center">
                         <div>
                             <p className="text-sm text-[--text-secondary]">Typing Pattern</p>
                             <p className="text-xl font-bold text-[--text-primary] capitalize">{lastTypingAnalysis.typingPattern}</p>
@@ -407,6 +429,10 @@ const ChatAnalysisSession: FC<ChatAnalysisSessionProps> = ({ messages, setMessag
                         <div>
                            <p className="text-sm text-[--text-secondary]">Sentiment</p>
                            <p className="text-xl font-bold text-[--text-primary]">{lastTypingAnalysis.sentiment}</p>
+                        </div>
+                        <div>
+                           <p className="text-sm text-[--text-secondary]">Theme</p>
+                           <p className="text-xl font-bold text-[--text-primary]">{lastTypingAnalysis.theme}</p>
                         </div>
                          <div>
                            <p className="text-sm text-[--text-secondary]">Cognitive Load</p>
@@ -427,12 +453,12 @@ const SessionJournal: FC<{ history: AnalysisResult[] }> = ({ history }) => (
                 <div key={item.id} className="p-3 rounded-lg bg-[--bg-primary] border border-[--border-color]">
                     <div className="flex justify-between items-center text-xs text-[--text-secondary] mb-1">
                         <span>{item.timestamp}</span>
-                        <span>Keys: {item.stats.keys} | Err: {(item.stats.errorRatio * 100).toFixed(0)}%</span>
+                        <span>Load: {item.cognitiveLoad}</span>
                     </div>
                     <div className="grid grid-cols-3 items-center text-center">
                         <span className="font-semibold text-base text-[--text-primary] capitalize">{item.typingPattern}</span>
                         <span className="font-semibold text-base text-[--text-primary]">{item.sentiment}</span>
-                         <span className="font-semibold text-base text-[--text-primary]">Load: {item.cognitiveLoad}</span>
+                         <span className="font-semibold text-base text-[--text-primary]">{item.theme}</span>
                     </div>
                 </div>
             ))
@@ -545,6 +571,7 @@ const TrendChart: FC<{ history: AnalysisResult[] }> = ({ history }) => {
         pattern: item.typingPattern,
         sentiment: item.sentiment,
         load: item.cognitiveLoad,
+        theme: item.theme,
     }));
 
     const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + `${p.x} ${p.y}`).join(' ');
@@ -569,7 +596,7 @@ const TrendChart: FC<{ history: AnalysisResult[] }> = ({ history }) => {
 
                     {points.map((p, i) => (
                         <circle key={i} cx={p.x} cy={p.y} r="3.5" fill={patternColors[p.pattern]} stroke="var(--bg-secondary)" strokeWidth="1.5">
-                            <title>{`Message ${i+1}: Cognitive Load ${p.load}, Sentiment: ${p.sentiment}, Pattern: ${p.pattern}`}</title>
+                            <title>{`Message ${i+1}: Cognitive Load ${p.load}, Sentiment: ${p.sentiment}, Theme: ${p.theme}`}</title>
                         </circle>
                     ))}
                 </svg>
@@ -582,6 +609,54 @@ const TrendChart: FC<{ history: AnalysisResult[] }> = ({ history }) => {
         </div>
     );
 };
+
+const CognitiveHotspots: FC<{ history: AnalysisResult[] }> = ({ history }) => {
+    const calculateHotspots = useCallback(() => {
+        const themeData = new Map<string, { totalLoad: number; count: number }>();
+        history.forEach(item => {
+            if (item.theme && item.theme !== 'General' && item.theme !== 'Unknown') {
+                const existing = themeData.get(item.theme) || { totalLoad: 0, count: 0 };
+                themeData.set(item.theme, {
+                    totalLoad: existing.totalLoad + item.cognitiveLoad,
+                    count: existing.count + 1,
+                });
+            }
+        });
+        const hotspots = Array.from(themeData.entries()).map(([theme, data]) => ({
+            theme,
+            avgLoad: Math.round(data.totalLoad / data.count),
+            count: data.count,
+        }));
+        return hotspots.sort((a, b) => b.avgLoad - a.avgLoad).slice(0, 5); // Show top 5
+    }, [history]);
+
+    const getHotspotColor = (load: number): string => {
+        if (load > 80) return 'bg-red-200 text-red-800 border-red-300';
+        if (load > 65) return 'bg-orange-200 text-orange-800 border-orange-300';
+        if (load > 50) return 'bg-amber-200 text-amber-800 border-amber-300';
+        return 'bg-green-200 text-green-800 border-green-300';
+    };
+
+    const hotspots = calculateHotspots();
+
+    if (hotspots.length === 0) {
+        return <div className="text-center text-[--text-secondary] py-4 text-base">Key topics will appear here as you chat.</div>;
+    }
+
+    return (
+        <div className="p-4 bg-[--bg-primary] rounded-lg border border-[--border-color] mb-6">
+            <div className="flex flex-wrap gap-2">
+                {hotspots.map(({ theme, avgLoad }) => (
+                    <div key={theme} className={`flex items-center gap-2 px-3 py-1 rounded-full text-base font-semibold border ${getHotspotColor(avgLoad)}`}>
+                        {theme}
+                        <span className="font-bold">{avgLoad}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 
 const AnalysisSkeletonLoader: FC = () => (
     <div className="p-4 bg-[--bg-primary] rounded-lg border border-[--border-color] animate-pulse">
@@ -670,14 +745,27 @@ export default function App() {
     if (!ai.current) { setStorageError("AI service is not available."); return; }
     setIsGeneratingPlan(true); setFinalAnalysis(null);
     const fullTranscript = messages.map(m => `${m.author === 'user' ? 'User' : 'Assistant'}: ${m.text}`).join('\n');
-    const analysisSummary = analysisHistory.map(a => `- At ${a.timestamp}, user showed '${a.typingPattern}' typing, a '${a.sentiment}' sentiment, and a cognitive load of ${a.cognitiveLoad}/100.`).join('\n');
+    
+    const themeData = new Map<string, { totalLoad: number; count: number }>();
+    analysisHistory.forEach(item => {
+        if (item.theme && item.theme !== 'General' && item.theme !== 'Unknown') {
+            const existing = themeData.get(item.theme) || { totalLoad: 0, count: 0 };
+            themeData.set(item.theme, { totalLoad: existing.totalLoad + item.cognitiveLoad, count: existing.count + 1 });
+        }
+    });
+    const hotspots = Array.from(themeData.entries()).map(([theme, data]) => ({ theme, avgLoad: Math.round(data.totalLoad / data.count), count: data.count }));
+    const hotspotSummary = hotspots
+        .sort((a,b) => b.avgLoad - a.avgLoad)
+        .map(h => `- Theme: '${h.theme}' (mentioned ${h.count} times) with an average cognitive load of ${h.avgLoad}/100.`)
+        .join('\n');
+
     const prompt = `You are a helpful and empathetic wellness coach specializing in sleep science. Based on the following data from a user's session, provide a comprehensive final analysis and a personalized, actionable sleep plan.
 **Session Data:**
 **1. Full Conversation Transcript:**\n${fullTranscript}\n
-**2. Cognitive & Behavioral Analysis Journal:**\n${analysisSummary}\n
+**2. Thematic Cognitive Hotspots:**\nThese are the topics that correlated with the highest cognitive load:\n${hotspotSummary || 'No specific themes were detected.'}\n
 **Your Task:** Generate a response in Markdown format. The response should have two main sections:
-1.  **Final Analysis:** Start with a heading '### Final Analysis'. Summarize the user's potential state of mind. Be gentle, insightful, and avoid making medical diagnoses. Connect their words to their typing patterns and cognitive load. For example, "I noticed when you discussed your workday, your cognitive load score increased significantly, suggesting this is a major source of stress."
-2.  **Your Personalized Sleep Plan:** Start with a heading '### Your Personalized Sleep Plan'. Provide 3-5 simple, concrete, and actionable steps the user can take based on the key stressors identified. Frame these as gentle suggestions. For example, "**1. Create a Wind-Down Routine:** ..." or "**2. Mindful Journaling:** ...".
+1.  **Final Analysis:** Start with a heading '### Final Analysis'. Summarize the user's potential state of mind. Be gentle and insightful. Connect their words to their cognitive load and, most importantly, to the **Thematic Hotspots**. For example, "I noticed when you discussed 'Work', your cognitive load score increased significantly, suggesting this is a major source of stress."
+2.  **Your Personalized Sleep Plan:** Start with a heading '### Your Personalized Sleep Plan'. Provide 3-5 simple, concrete, and actionable steps. **Crucially, these steps must directly address the highest-load themes identified in the hotspots.** Frame these as gentle suggestions. For example, "Given that 'Finances' was a point of high cognitive load, let's try this before bed: **1. Schedule a 'Worry Time':** ...".
 Keep the tone supportive, positive, and encouraging.`;
     
     try {
@@ -704,7 +792,7 @@ ${messages.map(m => `[${m.author.toUpperCase()}] ${m.text}`).join('\n')}
 ---
 
 ## Session Journal
-${analysisHistory.map(a => `- ${a.timestamp} | Typing: ${a.typingPattern} | Sentiment: ${a.sentiment} | Cognitive Load: ${a.cognitiveLoad}/100 | Keys: ${a.stats.keys} | Error%: ${(a.stats.errorRatio*100).toFixed(1)}`).join('\n')}
+${analysisHistory.map(a => `- ${a.timestamp} | Theme: ${a.theme} | Typing: ${a.typingPattern} | Sentiment: ${a.sentiment} | Cognitive Load: ${a.cognitiveLoad}/100`).join('\n')}
 
 ---
 
@@ -755,6 +843,13 @@ ${finalAnalysis || "Not generated yet."}
                     {activeTab === 'analysis' && (
                         <div className="space-y-6">
                              <div>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <FireIcon className="w-6 h-6 text-[--text-secondary]" />
+                                    <h3 className="text-xl font-semibold text-[--text-primary]">Cognitive Hotspots</h3>
+                                </div>
+                                <CognitiveHotspots history={analysisHistory} />
+                             </div>
+                             <div className="border-t border-[--border-color] pt-6">
                                 <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center gap-3">
                                         <ChartBarIcon className="w-6 h-6 text-[--text-secondary]" />
